@@ -1,7 +1,7 @@
 // ライブプレビュー
 
 import React from 'react';
-import { FiMaximize2 } from 'react-icons/fi';
+import { FiMaximize2, FiRefreshCw } from 'react-icons/fi';
 
 type LivePreviewGridProps = {
   code: string;
@@ -16,6 +16,7 @@ type LivePreviewGridProps = {
   showIframeError: boolean;
   setShowIframeError: (v: (prev: boolean) => boolean) => void;
   runBtnRef: React.RefObject<HTMLButtonElement>;
+  onReloadIframe: () => void;
 };
 
 export default function LivePreviewGrid({
@@ -30,6 +31,7 @@ export default function LivePreviewGrid({
   showIframeError,
   setShowIframeError,
   runBtnRef,
+  onReloadIframe,
 }: LivePreviewGridProps) {
   return (
     <div className="bg-card border border-border rounded-lg p-6 relative">
@@ -42,7 +44,15 @@ export default function LivePreviewGrid({
             disabled={!code.trim()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Run (Preview)
+            Run
+          </button>
+          <button
+            className="ml-2 px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border transition-colors text-xs flex items-center justify-center"
+            onClick={onReloadIframe}
+            aria-label="プレビューリセット"
+            title="リセット"
+          >
+            <FiRefreshCw size={18} />
           </button>
           <button
             className="ml-2 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"

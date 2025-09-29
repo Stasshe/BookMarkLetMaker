@@ -224,6 +224,16 @@ export function BookmarkletEditor() {
       }
     );
   };
+
+  // iframeリセットボタン用
+  const handleReloadIframe = () => {
+    setIframeLogs([]);
+    setIframeError(null);
+    setIframeLoaded(false);
+    if (iframeRef.current) {
+      iframeRef.current.src = testPageUrl;
+    }
+  };
   const iframeRef = useRef<HTMLIFrameElement>(null) as React.RefObject<HTMLIFrameElement>;
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState<string | null>(null);
@@ -581,6 +591,7 @@ console.log('Ad elements hidden');`,
               showIframeError={showIframeError}
               setShowIframeError={setShowIframeError}
               runBtnRef={runBtnRef}
+              onReloadIframe={handleReloadIframe}
             />
             <OutputGrid
               bookmarkletCode={bookmarkletCode}
