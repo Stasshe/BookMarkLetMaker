@@ -29,6 +29,9 @@ import OutputGrid from './BookmarkletEditor/OutputGrid';
 
 import { QRCodeGenerator } from './BookmarkletEditor/QRCodeGenerator';
 
+const STORAGE_KEY = 'bookmarklet_editor_code';
+const STORAGE_KEY_OPTIONS = 'bookmarklet_minify_options';
+
 const defaultCode = `// Example: Alert current page title
 alert('Current page: ' + document.title);
 
@@ -38,65 +41,47 @@ document.querySelectorAll('a').forEach(link => {
   link.style.padding = '2px';
 });`;
 
+// ローカルストレージからコードを読み込む
+const loadCodeFromStorage = (): string => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved || defaultCode;
+  } catch (e) {
+    console.error('Failed to load from localStorage:', e);
+    return defaultCode;
+  }
+};
+
+// ローカルストレージにコードを保存する
+const saveCodeToStorage = (code: string) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, code);
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+};
+
+// Minifyオプションを読み込む
+const loadMinifyOptionsFromStorage = (defaultOptions: any) => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_OPTIONS);
+    return saved ? JSON.parse(saved) : defaultOptions;
+  } catch (e) {
+    console.error('Failed to load minify options:', e);
+    return defaultOptions;
+  }
+};
+
+// Minifyオプションを保存する
+const saveMinifyOptionsToStorage = (options: any) => {
+  try {
+    localStorage.setItem(STORAGE_KEY_OPTIONS, JSON.stringify(options));
+  } catch (e) {
+    console.error('Failed to save minify options:', e);
+  }
+};
+
 export function BookmarkletEditor() {
-  // --- Minifyオプション管理 ---
-  const [showMinifyOptions, setShowMinifyOptions] = useState(false); // 初期状態: 閉じている
-  // --- 履歴管理 ---
-  const [history, setHistory] = useState<BookmarkletHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const [historyTitle, setHistoryTitle] = useState('');
-
-  // 履歴取得
-  const loadHistory = async () => {
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const items = await getAllHistory();
-      setHistory(items);
-    } catch (e) {
-      setHistoryError('履歴の取得に失敗しました');
-    }
-    setHistoryLoading(false);
-  };
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  // 履歴保存
-  const saveToHistory = async (code: string, bookmarkletCode: string) => {
-    let title = historyTitle.trim();
-    if (!title) {
-      const firstLine = (code || '').split('\n')[0] || '';
-      title = firstLine.slice(0, 32) || '無題';
-    }
-    await addHistory({ title, code, bookmarkletCode });
-    setHistoryTitle('');
-    await loadHistory();
-  };
-
-  // 履歴からエディタへ復元
-  const handleHistorySelect = (item: BookmarkletHistoryItem) => {
-    if (!window.confirm('この履歴の内容でエディタを上書きします。よろしいですか？')) return;
-    if (viewRef.current) {
-      const transaction = viewRef.current.state.update({
-        changes: {
-          from: 0,
-          to: viewRef.current.state.doc.length,
-          insert: item.code,
-        },
-      });
-      viewRef.current.dispatch(transaction);
-      viewRef.current.focus();
-    }
-    setCode(item.code);
-  };
-
-  // 履歴削除
-  const handleHistoryDelete = async (id: string) => {
-    await deleteHistory(id);
-    await loadHistory();
-  };
   const getDefaultMinifyOptions = () => ({
     compress: {
       arrows: true,
@@ -158,7 +143,86 @@ export function BookmarkletEditor() {
     keep_classnames: false,
     keep_fnames: false,
   });
-  const [minifyOptions, setMinifyOptions] = useState(getDefaultMinifyOptions());
+
+  // --- ローカルストレージから初期値を読み込み ---
+  const [code, setCode] = useState(() => loadCodeFromStorage());
+  const [minifyOptions, setMinifyOptions] = useState(() => 
+    loadMinifyOptionsFromStorage(getDefaultMinifyOptions())
+  );
+
+  // --- コードが変更されたら自動保存 ---
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      saveCodeToStorage(code);
+    }, 500); // 500ms後に保存（デバウンス）
+
+    return () => clearTimeout(timeoutId);
+  }, [code]);
+
+  // --- Minifyオプションが変更されたら保存 ---
+  useEffect(() => {
+    saveMinifyOptionsToStorage(minifyOptions);
+  }, [minifyOptions]);
+
+  // --- Minifyオプション管理 ---
+  const [showMinifyOptions, setShowMinifyOptions] = useState(false);
+  
+  // --- 履歴管理 ---
+  const [history, setHistory] = useState<BookmarkletHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyTitle, setHistoryTitle] = useState('');
+
+  // 履歴取得
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const items = await getAllHistory();
+      setHistory(items);
+    } catch (e) {
+      setHistoryError('履歴の取得に失敗しました');
+    }
+    setHistoryLoading(false);
+  };
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  // 履歴保存
+  const saveToHistory = async (code: string, bookmarkletCode: string) => {
+    let title = historyTitle.trim();
+    if (!title) {
+      const firstLine = (code || '').split('\n')[0] || '';
+      title = firstLine.slice(0, 32) || '無題';
+    }
+    await addHistory({ title, code, bookmarkletCode });
+    setHistoryTitle('');
+    await loadHistory();
+  };
+
+  // 履歴からエディタへ復元
+  const handleHistorySelect = (item: BookmarkletHistoryItem) => {
+    if (!window.confirm('この履歴の内容でエディタを上書きします。よろしいですか？')) return;
+    if (viewRef.current) {
+      const transaction = viewRef.current.state.update({
+        changes: {
+          from: 0,
+          to: viewRef.current.state.doc.length,
+          insert: item.code,
+        },
+      });
+      viewRef.current.dispatch(transaction);
+      viewRef.current.focus();
+    }
+    setCode(item.code);
+  };
+
+  // 履歴削除
+  const handleHistoryDelete = async (id: string) => {
+    await deleteHistory(id);
+    await loadHistory();
+  };
 
   // オプション変更ハンドラ
   const handleMinifyOptionChange = (group: string, key: string, value: any) => {
@@ -172,9 +236,10 @@ export function BookmarkletEditor() {
       return prev;
     });
   };
+
   // --- iframe consoleログ管理 ---
   const [iframeLogs, setIframeLogs] = useState<Array<{ type: string; value: string }>>([]);
-  const [code, setCode] = useState(defaultCode);
+  
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data && event.data.__bm_console) {
@@ -184,13 +249,14 @@ export function BookmarkletEditor() {
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
+
   const { theme } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const viewRef = useRef<EditorView | null>(null);
-  // ...existing code...
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  
   // --- ボタンアニメーション用 ---
   const runBtnRef = useRef<HTMLButtonElement>(null) as React.RefObject<HTMLButtonElement>;
   const createBtnRef = useRef<HTMLButtonElement>(null) as React.RefObject<HTMLButtonElement>;
@@ -236,19 +302,19 @@ export function BookmarkletEditor() {
       iframeRef.current.src = testPageUrl;
     }
   };
+
   const iframeRef = useRef<HTMLIFrameElement>(null) as React.RefObject<HTMLIFrameElement>;
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState<string | null>(null);
   const [showIframeError, setShowIframeError] = useState(false);
+
   const injectCodeToIframe = (jsCode: string) => {
     if (!iframeRef.current || !iframeLoaded) return;
     try {
       const win = iframeRef.current.contentWindow;
       if (!win) return;
-      // 既存のscriptタグを削除
       const scripts = win.document.querySelectorAll('script[data-bm]');
       scripts.forEach(s => s.remove());
-      // consoleフック用スクリプト
       const hookScript = win.document.createElement('script');
       hookScript.setAttribute('data-bm', '1');
       hookScript.type = 'text/javascript';
@@ -267,7 +333,6 @@ export function BookmarkletEditor() {
         })();
       `;
       win.document.body.appendChild(hookScript);
-      // 新しいユーザーコードスクリプト
       const script = win.document.createElement('script');
       script.setAttribute('data-bm', '1');
       script.type = 'text/javascript';
@@ -282,9 +347,10 @@ export function BookmarkletEditor() {
       }
     }
   };
+
   // 全画面プレビュー用
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // 全画面時のescキー対応
+  
   useEffect(() => {
     if (!isFullscreen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -293,7 +359,7 @@ export function BookmarkletEditor() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isFullscreen]);
-  // テストページのURL
+
   const testPageUrl = '/bookmarklet-test.html';
 
   useEffect(() => {
@@ -319,7 +385,6 @@ export function BookmarkletEditor() {
     });
     viewRef.current = view;
 
-    // Alt+Up/DownでスクロールしないようにpreventDefault
     const handler = (e: KeyboardEvent) => {
       if ((e.altKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
@@ -334,7 +399,6 @@ export function BookmarkletEditor() {
     };
   }, [theme]);
 
-  // Bookmarklet生成のみ
   const createBookmarklet = async () => {
     animateButton(createBtnRef);
     if (!code.trim()) return;
@@ -359,17 +423,13 @@ export function BookmarkletEditor() {
     setIsProcessing(false);
   };
 
-  // iframeへの注入のみ
   const runInIframe = () => {
     animateButton(runBtnRef);
-    // Reset logs and error before each run
     setIframeLogs([]);
     setIframeError(null);
-    // If iframe is not loaded, force reload
     if (!iframeLoaded && iframeRef.current) {
       setIframeLoaded(false);
       iframeRef.current.src = testPageUrl;
-      // injectCodeToIframe will be called onLoad
     } else {
       injectCodeToIframe(code);
     }
@@ -377,7 +437,6 @@ export function BookmarkletEditor() {
 
   const copyToClipboard = async () => {
     if (!bookmarkletCode) return;
-
     try {
       await navigator.clipboard.writeText(bookmarkletCode);
       setCopySuccess(true);
@@ -389,7 +448,6 @@ export function BookmarkletEditor() {
 
   const executeBookmarklet = () => {
     if (!bookmarkletCode) return;
-
     try {
       const codeToExecute = bookmarkletCode.replace('javascript:', '');
       eval(codeToExecute);
@@ -399,7 +457,6 @@ export function BookmarkletEditor() {
     }
   };
 
-  // 新しいloadExample: fetchでpublicから取得
   const loadExample = async (fileOrCode: string) => {
     if (typeof fileOrCode === 'string' && fileOrCode.endsWith('.js')) {
       try {
@@ -424,10 +481,8 @@ export function BookmarkletEditor() {
     }
   };
 
-  // 文字数・バイト数計算用関数
   const getByteLength = (str: string) => new TextEncoder().encode(str).length;
 
-  // コードフォーマット機能
   const [isFormatting, setIsFormatting] = useState(false);
   const handleFormatCode = async () => {
     if (!code.trim()) return;
@@ -452,7 +507,6 @@ export function BookmarkletEditor() {
     setIsFormatting(false);
   };
 
-  // サンプル一覧（public/example/配下のファイル名と説明）
   const examples = [
     {
       name: 'HTML編集',
@@ -584,7 +638,6 @@ export function BookmarkletEditor() {
               handleHistoryDelete={handleHistoryDelete}
               bookmarkletCode={bookmarkletCode}
             />
-            {/* QRコードを左側に移動 */}
             <div className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-sm">
               <div className="font-semibold text-neutral-700 dark:text-neutral-200 mb-1">
                 QRコードで共有
