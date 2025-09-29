@@ -1,3 +1,5 @@
+正しい位置を読み取り正しい位置を修正してください。JSXの構文に注意してください。
+
 Be sure to reread the file and check for errors whenever you make a large change of 100 lines or more.
 
 Always read the correct position and make modifications at the correct place. Pay attention to JSX syntax.

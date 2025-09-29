@@ -1,7 +1,7 @@
 // サンプル例一覧
 type ExamplesGridProps = {
-  examples: Array<{ name: string; code: string }>;
-  loadExample: (code: string) => void;
+  examples: Array<{ name: string; file: string }>;
+  loadExample: (file: string) => void;
 };
 
 export default function ExamplesGrid({ examples, loadExample }: ExamplesGridProps) {
@@ -12,7 +12,7 @@ export default function ExamplesGrid({ examples, loadExample }: ExamplesGridProp
         {examples.map(example => (
           <button
             key={example.name}
-            onClick={() => loadExample(example.code)}
+            onClick={() => loadExample(example.file)}
             className="p-3 text-left bg-muted hover:bg-muted/80 rounded-md transition-colors"
           >
             <div className="font-medium text-sm">{example.name}</div>

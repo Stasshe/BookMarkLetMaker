@@ -396,78 +396,58 @@ export function BookmarkletEditor() {
       alert('Error executing bookmarklet: ' + error);
     }
   };
-  const loadExample = (exampleCode: string) => {
-    setCode(exampleCode);
-    if (viewRef.current) {
-      const transaction = viewRef.current.state.update({
-        changes: {
-          from: 0,
-          to: viewRef.current.state.doc.length,
-          insert: exampleCode,
-        },
-      });
-      viewRef.current.dispatch(transaction);
-      // フォーカス維持
-      viewRef.current.focus();
+
+  // 新しいloadExample: fetchでpublicから取得
+  const loadExample = async (fileOrCode: string) => {
+    if (typeof fileOrCode === 'string' && fileOrCode.endsWith('.js')) {
+      try {
+        const res = await fetch(fileOrCode);
+        if (!res.ok) throw new Error('ファイルの取得に失敗しました');
+        const code = await res.text();
+        setCode(code);
+        if (viewRef.current) {
+          const transaction = viewRef.current.state.update({
+            changes: {
+              from: 0,
+              to: viewRef.current.state.doc.length,
+              insert: code,
+            },
+          });
+          viewRef.current.dispatch(transaction);
+          viewRef.current.focus();
+        }
+      } catch (e) {
+        alert('サンプルの読み込みに失敗しました');
+      }
     }
   };
 
-  const examples = [
-    {
-      name: 'Page Info',
-      code: `const info = {
-  title: document.title,
-  url: window.location.href,
-  domain: window.location.hostname,
-  links: document.querySelectorAll('a').length,
-  images: document.querySelectorAll('img').length
-};
-
-alert(JSON.stringify(info, null, 2));`,
-    },
-    {
-      name: 'Highlight Text',
-      code: `const searchTerm = prompt('Enter text to highlight:');
-if (searchTerm) {
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT
-  );
-  
-  let node;
-  while (node = walker.nextNode()) {
-    if (node.textContent.toLowerCase().includes(searchTerm.toLowerCase())) {
-      const parent = node.parentNode;
-      const highlighted = document.createElement('mark');
-      highlighted.style.backgroundColor = 'yellow';
-      highlighted.textContent = node.textContent;
-      parent.replaceChild(highlighted, node);
-    }
-  }
-}`,
-    },
-    {
-      name: 'Remove Ads',
-      code: `const selectors = [
-  '[class*="ad"]',
-  '[id*="ad"]',
-  '[class*="banner"]',
-  '[class*="popup"]',
-  '.advertisement'
-];
-
-selectors.forEach(selector => {
-  document.querySelectorAll(selector).forEach(el => {
-    el.style.display = 'none';
-  });
-});
-
-console.log('Ad elements hidden');`,
-    },
-  ];
-
   // 文字数・バイト数計算用関数
   const getByteLength = (str: string) => new TextEncoder().encode(str).length;
+
+  // サンプル一覧（public/example/配下のファイル名と説明）
+  const examples = [
+    {
+      name: 'HTML編集',
+      file: '/example/edit-html.js',
+      description: 'ページのHTMLを直接編集できるブックマークレット',
+    },
+    {
+      name: 'テキストハイライト',
+      file: '/example/highlight-text.js',
+      description: '選択したテキストをハイライト表示',
+    },
+    {
+      name: 'ページ情報取得',
+      file: '/example/page-info.js',
+      description: 'ページのタイトルやURLなどの情報を取得',
+    },
+    {
+      name: '広告削除',
+      file: '/example/remove-ads.js',
+      description: 'よくある広告要素を非表示にする',
+    },
+  ];
 
   return (
     <>
