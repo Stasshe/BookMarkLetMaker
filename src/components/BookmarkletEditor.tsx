@@ -5,7 +5,7 @@ import { EditorState } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, basicSetup } from 'codemirror';
 import { useEffect, useRef, useState } from 'react';
-import { FiMaximize2, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiChevronRight, FiMaximize2, FiX } from 'react-icons/fi';
 import { minify } from 'terser';
 
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -21,6 +21,82 @@ document.querySelectorAll('a').forEach(link => {
 });`;
 
 export function BookmarkletEditor() {
+  // --- Minifyオプション管理 ---
+  const [showMinifyOptions, setShowMinifyOptions] = useState(false); // 初期状態: 閉じている
+  const getDefaultMinifyOptions = () => ({
+    compress: {
+      arrows: true,
+      booleans: true,
+      collapse_vars: true,
+      comparisons: true,
+      computed_props: true,
+      conditionals: true,
+      dead_code: true,
+      drop_console: true,
+      drop_debugger: true,
+      evaluate: true,
+      hoist_funs: true,
+      hoist_props: true,
+      hoist_vars: true,
+      if_return: true,
+      inline: true,
+      join_vars: true,
+      keep_fargs: false,
+      keep_fnames: false,
+      keep_infinity: false,
+      loops: true,
+      negate_iife: true,
+      passes: 3,
+      properties: true,
+      reduce_funcs: true,
+      reduce_vars: true,
+      sequences: true,
+      side_effects: true,
+      switches: true,
+      toplevel: true,
+      typeofs: true,
+      unsafe: true,
+      unsafe_arrows: true,
+      unsafe_comps: true,
+      unsafe_Function: true,
+      unsafe_math: true,
+      unsafe_methods: true,
+      unsafe_proto: true,
+      unsafe_regexp: true,
+      unsafe_undefined: true,
+      unused: true,
+    },
+    mangle: {
+      toplevel: true,
+      properties: true,
+      keep_classnames: false,
+      keep_fnames: false,
+      module: true,
+      safari10: false,
+    },
+    format: {
+      comments: false,
+      beautify: false,
+    },
+    ecma: 2020,
+    toplevel: true,
+    keep_classnames: false,
+    keep_fnames: false,
+  });
+  const [minifyOptions, setMinifyOptions] = useState(getDefaultMinifyOptions())
+
+  // オプション変更ハンドラ
+  const handleMinifyOptionChange = (group: string, key: string, value: any) => {
+    setMinifyOptions(prev => {
+      if (group === 'root') {
+        return { ...prev, [key]: value };
+      }
+      if (group === 'compress' || group === 'mangle' || group === 'format') {
+        return { ...prev, [group]: { ...prev[group], [key]: value } };
+      }
+      return prev;
+    });
+  };
   // --- iframe consoleログ管理 ---
   const [iframeLogs, setIframeLogs] = useState<Array<{ type: string; value: string }>>([]);
   const [code, setCode] = useState(defaultCode);
@@ -141,33 +217,15 @@ export function BookmarkletEditor() {
 
   const createBookmarklet = async () => {
     if (!code.trim()) return;
-
     setIsProcessing(true);
     try {
       const result = await minify(code, {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          passes: 3,
-          unsafe: true,
-          unsafe_arrows: true,
-          unsafe_methods: true,
-          unsafe_proto: true,
-          unsafe_undefined: true,
-        },
-        mangle: {
-          toplevel: true,
-        },
-        format: {
-          comments: false,
-          beautify: false,
-        },
-        ecma: 2020,
-        toplevel: true,
-        keep_classnames: false,
-        keep_fnames: false,
+        ...minifyOptions,
+        compress: { ...minifyOptions.compress },
+        mangle: { ...minifyOptions.mangle },
+        format: { ...minifyOptions.format },
+        ecma: minifyOptions.ecma as any, // 型エラー回避（terserの型ECMAはnumberのユニオン）
       });
-
       const minifiedCode = result.code || code;
       const wrappedCode = `javascript:(function(){${minifiedCode}})();`;
       setBookmarkletCode(wrappedCode);
@@ -279,6 +337,98 @@ console.log('Ad elements hidden');`,
 
   return (
     <>
+      {/* Minifyオプション設定UI（折りたたみ） */}
+      <div className="max-w-6xl mx-auto mt-8 mb-6">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <button
+            className="flex items-center gap-2 text-base font-semibold text-card-foreground mb-4 focus:outline-none hover:underline"
+            onClick={() => setShowMinifyOptions(v => !v)}
+            aria-expanded={showMinifyOptions}
+            aria-controls="minify-options-panel"
+            type="button"
+          >
+            {showMinifyOptions ? (
+              <FiChevronDown size={20} />
+            ) : (
+              <FiChevronRight size={20} />
+            )}
+            Minifyオプション詳細設定
+          </button>
+          {showMinifyOptions && (
+            <div id="minify-options-panel" className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+              {/* compress */}
+              <div>
+                <div className="font-bold mb-2">compress</div>
+                <div className="flex flex-col gap-2">
+                  <label><input type="checkbox" checked={minifyOptions.compress.drop_console} onChange={e => handleMinifyOptionChange('compress', 'drop_console', e.target.checked)} /> drop_console</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.drop_debugger} onChange={e => handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)} /> drop_debugger</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe} onChange={e => handleMinifyOptionChange('compress', 'unsafe', e.target.checked)} /> unsafe</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_arrows} onChange={e => handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)} /> unsafe_arrows</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_methods} onChange={e => handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)} /> unsafe_methods</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_proto} onChange={e => handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)} /> unsafe_proto</label>
+                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_undefined} onChange={e => handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)} /> unsafe_undefined</label>
+                  <label>
+                    passes
+                    <input type="number" min={1} max={10} value={minifyOptions.compress.passes} onChange={e => handleMinifyOptionChange('compress', 'passes', Number(e.target.value))} className="ml-2 w-16 border rounded px-1 py-0.5 text-black bg-white" />
+                  </label>
+                </div>
+              </div>
+              {/* mangle */}
+              <div>
+                <div className="font-bold mb-2">mangle</div>
+                <div className="flex flex-col gap-2">
+                  <label><input type="checkbox" checked={minifyOptions.mangle.toplevel} onChange={e => handleMinifyOptionChange('mangle', 'toplevel', e.target.checked)} /> toplevel</label>
+                  <label><input type="checkbox" checked={minifyOptions.mangle.properties} onChange={e => handleMinifyOptionChange('mangle', 'properties', e.target.checked)} /> properties</label>
+                  <label><input type="checkbox" checked={minifyOptions.mangle.keep_classnames} onChange={e => handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)} /> keep_classnames</label>
+                  <label><input type="checkbox" checked={minifyOptions.mangle.keep_fnames} onChange={e => handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)} /> keep_fnames</label>
+                  <label><input type="checkbox" checked={minifyOptions.mangle.module} onChange={e => handleMinifyOptionChange('mangle', 'module', e.target.checked)} /> module</label>
+                  <label><input type="checkbox" checked={minifyOptions.mangle.safari10} onChange={e => handleMinifyOptionChange('mangle', 'safari10', e.target.checked)} /> safari10</label>
+                </div>
+              </div>
+              {/* format */}
+              <div>
+                <div className="font-bold mb-2">format</div>
+                <div className="flex flex-col gap-2">
+                  <label><input type="checkbox" checked={minifyOptions.format.comments} onChange={e => handleMinifyOptionChange('format', 'comments', e.target.checked)} /> comments</label>
+                  <label><input type="checkbox" checked={minifyOptions.format.beautify} onChange={e => handleMinifyOptionChange('format', 'beautify', e.target.checked)} /> beautify</label>
+                </div>
+              </div>
+              {/* その他 */}
+              <div>
+                <div className="font-bold mb-2">その他</div>
+                <div className="flex flex-col gap-2">
+                  <label>
+                    ecma
+                    <select value={minifyOptions.ecma} onChange={e => handleMinifyOptionChange('root', 'ecma', Number(e.target.value))} className="ml-2 border rounded px-1 py-0.5 text-black bg-white">
+                      <option value={5}>5</option>
+                      <option value={2015}>2015</option>
+                      <option value={2016}>2016</option>
+                      <option value={2017}>2017</option>
+                      <option value={2018}>2018</option>
+                      <option value={2019}>2019</option>
+                      <option value={2020}>2020</option>
+                      <option value={2021}>2021</option>
+                    </select>
+                  </label>
+                  <label><input type="checkbox" checked={minifyOptions.toplevel} onChange={e => handleMinifyOptionChange('root', 'toplevel', e.target.checked)} /> toplevel</label>
+                  <label><input type="checkbox" checked={minifyOptions.keep_classnames} onChange={e => handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)} /> keep_classnames</label>
+                  <label><input type="checkbox" checked={minifyOptions.keep_fnames} onChange={e => handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)} /> keep_fnames</label>
+                </div>
+              </div>
+              {/* Resetボタン */}
+              <div className="absolute right-0 top-0 mt-2 mr-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-muted text-muted-foreground border border-border rounded hover:bg-muted/80 transition-colors text-xs font-semibold"
+                  onClick={() => setMinifyOptions(getDefaultMinifyOptions())}
+                >
+                  リセット
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {/* 全画面プレビュー */}
       {isFullscreen && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center">
