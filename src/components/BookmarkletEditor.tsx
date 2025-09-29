@@ -7,10 +7,9 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, basicSetup } from 'codemirror';
 import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
-import { FiChevronDown, FiChevronRight, FiMaximize2, FiX } from 'react-icons/fi';
+import { FiX } from 'react-icons/fi';
 import { minify } from 'terser';
 
-import { HistoryList } from '@/components/HistoryList';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -19,6 +18,13 @@ import {
   deleteHistory,
   getAllHistory,
 } from '@/utils/bookmarkletHistoryDB';
+import EditorGrid from './BookmarkletEditor/EditorGrid';
+import ExamplesGrid from './BookmarkletEditor/ExamplesGrid';
+import HistoryGrid from './BookmarkletEditor/HistoryGrid';
+import InstructionsGrid from './BookmarkletEditor/InstructionsGrid';
+import LivePreviewGrid from './BookmarkletEditor/LivePreviewGrid';
+import MinifyOptionsGrid from './BookmarkletEditor/MinifyOptionsGrid';
+import OutputGrid from './BookmarkletEditor/OutputGrid';
 
 const defaultCode = `// Example: Alert current page title
 alert('Current page: ' + document.title);
@@ -175,15 +181,15 @@ export function BookmarkletEditor() {
     return () => window.removeEventListener('message', handler);
   }, []);
   const { theme } = useTheme();
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const viewRef = useRef<EditorView | null>(null);
   // ...existing code...
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   // --- ボタンアニメーション用 ---
-  const runBtnRef = useRef<HTMLButtonElement>(null);
-  const createBtnRef = useRef<HTMLButtonElement>(null);
+  const runBtnRef = useRef<HTMLButtonElement>(null) as React.RefObject<HTMLButtonElement>;
+  const createBtnRef = useRef<HTMLButtonElement>(null) as React.RefObject<HTMLButtonElement>;
 
   // コーポレート感重視の上品なボタンアニメーション
   const animateButton = (ref: React.RefObject<HTMLButtonElement | null>) => {
@@ -216,7 +222,7 @@ export function BookmarkletEditor() {
       }
     );
   };
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null) as React.RefObject<HTMLIFrameElement>;
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState<string | null>(null);
   const [showIframeError, setShowIframeError] = useState(false);
@@ -443,271 +449,14 @@ console.log('Ad elements hidden');`,
 
   return (
     <>
-      {/* Minifyオプション設定UI（折りたたみ） */}
-      <div className="max-w-6xl mx-auto mt-8 mb-6">
-        <div className="bg-card border border-border rounded-lg p-6">
-          <button
-            className="flex items-center gap-2 text-base font-semibold text-card-foreground mb-4 focus:outline-none hover:underline"
-            onClick={() => setShowMinifyOptions(v => !v)}
-            aria-expanded={showMinifyOptions}
-            aria-controls="minify-options-panel"
-            type="button"
-          >
-            {showMinifyOptions ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}
-            Minifyオプション詳細設定
-          </button>
-          {showMinifyOptions && (
-            <div
-              id="minify-options-panel"
-              className="grid grid-cols-1 md:grid-cols-2 gap-6 relative"
-            >
-              {/* compress */}
-              <div>
-                <div className="font-bold mb-2">compress</div>
-                <div className="flex flex-col gap-2">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.drop_console}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'drop_console', e.target.checked)
-                      }
-                    />{' '}
-                    drop_console
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.drop_debugger}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)
-                      }
-                    />{' '}
-                    drop_debugger
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.unsafe}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'unsafe', e.target.checked)
-                      }
-                    />{' '}
-                    unsafe
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.unsafe_arrows}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)
-                      }
-                    />{' '}
-                    unsafe_arrows
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.unsafe_methods}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)
-                      }
-                    />{' '}
-                    unsafe_methods
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.unsafe_proto}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)
-                      }
-                    />{' '}
-                    unsafe_proto
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.compress.unsafe_undefined}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)
-                      }
-                    />{' '}
-                    unsafe_undefined
-                  </label>
-                  <label>
-                    passes
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={minifyOptions.compress.passes}
-                      onChange={e =>
-                        handleMinifyOptionChange('compress', 'passes', Number(e.target.value))
-                      }
-                      className="ml-2 w-16 border rounded px-1 py-0.5 text-black bg-white"
-                    />
-                  </label>
-                </div>
-              </div>
-              {/* mangle */}
-              <div>
-                <div className="font-bold mb-2">mangle</div>
-                <div className="flex flex-col gap-2">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.toplevel}
-                      onChange={e =>
-                        handleMinifyOptionChange('mangle', 'toplevel', e.target.checked)
-                      }
-                    />{' '}
-                    toplevel
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.properties}
-                      onChange={e =>
-                        handleMinifyOptionChange('mangle', 'properties', e.target.checked)
-                      }
-                    />{' '}
-                    properties
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.keep_classnames}
-                      onChange={e =>
-                        handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)
-                      }
-                    />{' '}
-                    keep_classnames
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.keep_fnames}
-                      onChange={e =>
-                        handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)
-                      }
-                    />{' '}
-                    keep_fnames
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.module}
-                      onChange={e => handleMinifyOptionChange('mangle', 'module', e.target.checked)}
-                    />{' '}
-                    module
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.mangle.safari10}
-                      onChange={e =>
-                        handleMinifyOptionChange('mangle', 'safari10', e.target.checked)
-                      }
-                    />{' '}
-                    safari10
-                  </label>
-                </div>
-              </div>
-              {/* format */}
-              <div>
-                <div className="font-bold mb-2">format</div>
-                <div className="flex flex-col gap-2">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.format.comments}
-                      onChange={e =>
-                        handleMinifyOptionChange('format', 'comments', e.target.checked)
-                      }
-                    />{' '}
-                    comments
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.format.beautify}
-                      onChange={e =>
-                        handleMinifyOptionChange('format', 'beautify', e.target.checked)
-                      }
-                    />{' '}
-                    beautify
-                  </label>
-                </div>
-              </div>
-              {/* その他 */}
-              <div>
-                <div className="font-bold mb-2">その他</div>
-                <div className="flex flex-col gap-2">
-                  <label>
-                    ecma
-                    <select
-                      value={minifyOptions.ecma}
-                      onChange={e =>
-                        handleMinifyOptionChange('root', 'ecma', Number(e.target.value))
-                      }
-                      className="ml-2 border rounded px-1 py-0.5 text-black bg-white"
-                    >
-                      <option value={5}>5</option>
-                      <option value={2015}>2015</option>
-                      <option value={2016}>2016</option>
-                      <option value={2017}>2017</option>
-                      <option value={2018}>2018</option>
-                      <option value={2019}>2019</option>
-                      <option value={2020}>2020</option>
-                      <option value={2021}>2021</option>
-                    </select>
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.toplevel}
-                      onChange={e => handleMinifyOptionChange('root', 'toplevel', e.target.checked)}
-                    />{' '}
-                    toplevel
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.keep_classnames}
-                      onChange={e =>
-                        handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)
-                      }
-                    />{' '}
-                    keep_classnames
-                  </label>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={minifyOptions.keep_fnames}
-                      onChange={e =>
-                        handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)
-                      }
-                    />{' '}
-                    keep_fnames
-                  </label>
-                </div>
-              </div>
-              {/* Resetボタン */}
-              <div className="absolute right-0 top-0 mt-2 mr-2">
-                <button
-                  type="button"
-                  className="px-3 py-1 bg-muted text-muted-foreground border border-border rounded hover:bg-muted/80 transition-colors text-xs font-semibold"
-                  onClick={() => setMinifyOptions(getDefaultMinifyOptions())}
-                >
-                  リセット
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      {/* 全画面プレビュー */}
+      <MinifyOptionsGrid
+        show={showMinifyOptions}
+        setShow={setShowMinifyOptions}
+        minifyOptions={minifyOptions}
+        handleMinifyOptionChange={handleMinifyOptionChange}
+        getDefaultMinifyOptions={getDefaultMinifyOptions}
+        setMinifyOptions={setMinifyOptions}
+      />
       {isFullscreen && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center">
           <button
@@ -736,13 +485,10 @@ console.log('Ad elements hidden');`,
               ブックマークレットを手動で実行
             </button>
           </div>
-          {/* iframeログ・エラーも全画面時に表示 */}
           <div className="absolute left-1/2 -translate-x-1/2 bottom-8 w-[min(700px,90vw)]">
             {iframeLogs.length > 0 && (
               <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
-                <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
-                  Console Output
-                </div>
+                <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">Console Output</div>
                 {iframeLogs.map((log, i) => (
                   <div key={i} className="mb-1">
                     <span className="font-mono text-blue-700 dark:text-blue-300">[{log.type}]</span>{' '}
@@ -773,284 +519,52 @@ console.log('Ad elements hidden');`,
         <div className="fixed top-6 right-6 z-50">
           <ThemeToggle />
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Editor Section */}
           <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-card-foreground">JavaScript Editor</h2>
-                <button
-                  ref={createBtnRef}
-                  onClick={createBookmarklet}
-                  disabled={isProcessing || !code.trim()}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isProcessing ? 'Processing...' : 'Create Bookmarklet'}
-                </button>
-              </div>
-
-              <div className="border border-border rounded-md overflow-hidden">
-                <div
-                  ref={editorRef}
-                  className="min-h-[400px] max-h-[600px] overflow-auto"
-                  style={{ maxHeight: 600 }}
-                />
-              </div>
-            </div>
-
-            {/* Examples */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-card-foreground mb-4">Examples</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {examples.map(example => (
-                  <button
-                    key={example.name}
-                    onClick={() => loadExample(example.code)}
-                    className="p-3 text-left bg-muted hover:bg-muted/80 rounded-md transition-colors"
-                  >
-                    <div className="font-medium text-sm">{example.name}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Bookmarklet履歴 */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-                履歴
-                <span className="text-xs text-muted-foreground font-normal">（最大100件程度）</span>
-              </h3>
-              <div className="mb-3 flex gap-2">
-                <input
-                  type="text"
-                  className="flex-1 px-2 py-1 border rounded text-sm bg-background text-foreground"
-                  placeholder="タイトル（省略可）"
-                  value={historyTitle}
-                  onChange={e => setHistoryTitle(e.target.value)}
-                  maxLength={32}
-                />
-                <button
-                  type="button"
-                  className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-xs font-semibold disabled:opacity-50"
-                  disabled={!code.trim()}
-                  onClick={() => saveToHistory(code, bookmarkletCode)}
-                >
-                  履歴に保存
-                </button>
-              </div>
-              {historyLoading ? (
-                <div className="text-muted-foreground text-sm py-8 text-center">読み込み中...</div>
-              ) : historyError ? (
-                <div className="text-destructive text-sm py-8 text-center">{historyError}</div>
-              ) : (
-                <HistoryList
-                  items={history}
-                  onSelect={handleHistorySelect}
-                  onDelete={handleHistoryDelete}
-                />
-              )}
-            </div>
+            <EditorGrid
+              code={code}
+              setCode={setCode}
+              editorRef={editorRef}
+              createBtnRef={createBtnRef}
+              createBookmarklet={createBookmarklet}
+              isProcessing={isProcessing}
+            />
+            <ExamplesGrid examples={examples} loadExample={loadExample} />
+            <HistoryGrid
+              history={history}
+              historyLoading={historyLoading}
+              historyError={historyError}
+              historyTitle={historyTitle}
+              setHistoryTitle={setHistoryTitle}
+              code={code}
+              saveToHistory={saveToHistory}
+              handleHistorySelect={handleHistorySelect}
+              handleHistoryDelete={handleHistoryDelete}
+              bookmarkletCode={bookmarkletCode}
+            />
           </div>
-
-          {/* Live Preview Section */}
           <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6 relative">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-card-foreground">
-                  Live Preview (Test Page)
-                </h2>
-                <div className="flex gap-2 items-center">
-                  <button
-                    ref={runBtnRef}
-                    onClick={runInIframe}
-                    disabled={!code.trim()}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Run (Preview)
-                  </button>
-                  <button
-                    className="ml-2 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                    onClick={() => setIsFullscreen(true)}
-                    aria-label="全画面表示"
-                  >
-                    <FiMaximize2 size={22} />
-                  </button>
-                </div>
-              </div>
-              <div className="w-full h-[600px] border rounded-lg overflow-hidden">
-                <iframe
-                  ref={iframeRef}
-                  src={testPageUrl}
-                  title="Bookmarklet Test Page"
-                  className="w-full h-full bg-white"
-                  onLoad={() => setIframeLoaded(true)}
-                />
-              </div>
-              {/* iframe consoleログ出力 */}
-              {iframeLogs.length > 0 && (
-                <div className="mt-4 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
-                  <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
-                    Console Output
-                  </div>
-                  {iframeLogs.map((log, i) => (
-                    <div key={i} className="mb-1">
-                      <span className="font-mono text-blue-700 dark:text-blue-300">
-                        [{log.type}]
-                      </span>{' '}
-                      <span className="break-all">{log.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* エラーログ（折りたたみ） */}
-              {iframeError && (
-                <div className="mt-3">
-                  <button
-                    className="text-xs text-red-600 underline mb-1"
-                    onClick={() => setShowIframeError(v => !v)}
-                  >
-                    {showIframeError ? 'エラー詳細を隠す' : 'エラー詳細を表示'}
-                  </button>
-                  {showIframeError && (
-                    <div className="bg-red-50 border border-red-200 text-red-800 rounded p-2 text-xs whitespace-pre-wrap">
-                      {iframeError}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="mt-2 text-xs text-muted-foreground">
-                エディタのコードは即時でテストページに反映されます（minifyせず・デバウンス無し）。
-              </div>
-            </div>
-          </div>
-
-          {/* Output Section */}
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-2xl font-semibold text-card-foreground mb-4">
-                Generated Bookmarklet Code
-              </h2>
-              {bookmarkletCode ? (
-                <div className="space-y-4">
-                  <div className="bg-muted p-4 rounded-md border">
-                    <code className="text-sm break-all text-muted-foreground">
-                      {bookmarkletCode.length > 120
-                        ? `${bookmarkletCode.slice(0, 120)}...`
-                        : bookmarkletCode}
-                    </code>
-                  </div>
-                  {bookmarkletCode.length > 120 && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      ※ 全文はクリップボードにコピーされます
-                    </div>
-                  )}
-                  {/* 文字数・バイト数表示 */}
-                  <div className="mt-2 text-xs text-muted-foreground flex gap-4">
-                    <span>文字数: {bookmarkletCode.length}文字</span>
-                    <span>容量: {getByteLength(bookmarkletCode)}バイト</span>
-                  </div>
-                  <div className="mt-6">
-                    <div className="text-sm font-semibold text-card-foreground mb-2">操作</div>
-                    <div className="flex flex-col gap-4">
-                      <button
-                        onClick={copyToClipboard}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-3 text-base font-bold rounded-lg bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60"
-                        style={{ letterSpacing: '0.02em' }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16h8a2 2 0 002-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6a2 2 0 002 2z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"
-                          />
-                        </svg>
-                        {copySuccess ? 'コピーしました！' : 'クリップボードにコピー'}
-                      </button>
-                      <button
-                        onClick={executeBookmarklet}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-3 text-base font-bold rounded-lg bg-accent text-accent-foreground shadow hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/60"
-                        style={{ letterSpacing: '0.02em' }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 12h14M12 5l7 7-7 7"
-                          />
-                        </svg>
-                        その場で実行
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <div className="text-4xl mb-4">📝</div>
-                  <p>
-                    Write your JavaScript code and click Create Bookmarklet to generate the
-                    bookmarklet.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-card-foreground mb-4">How to Use</h3>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    1
-                  </div>
-                  <p>エディタでJavaScriptコードを編集すると、右のテストページに即時反映されます</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    2
-                  </div>
-                  <p>Click Create Bookmarklet to minify and wrap your code</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    3
-                  </div>
-                  <p>Copy the generated bookmarklet code</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    4
-                  </div>
-                  <p>Create a new bookmark in your browser and paste the code as the URL</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    5
-                  </div>
-                  <p>Click the bookmark on any webpage to execute your code</p>
-                </div>
-              </div>
-            </div>
+            <LivePreviewGrid
+              code={code}
+              runInIframe={runInIframe}
+              setIsFullscreen={setIsFullscreen}
+              iframeRef={iframeRef}
+              testPageUrl={testPageUrl}
+              iframeLoaded={iframeLoaded}
+              setIframeLoaded={setIframeLoaded}
+              iframeLogs={iframeLogs}
+              iframeError={iframeError}
+              showIframeError={showIframeError}
+              setShowIframeError={setShowIframeError}
+            />
+            <OutputGrid
+              bookmarkletCode={bookmarkletCode}
+              copySuccess={copySuccess}
+              copyToClipboard={copyToClipboard}
+              executeBookmarklet={executeBookmarklet}
+              getByteLength={getByteLength}
+            />
+            <InstructionsGrid />
           </div>
         </div>
       </div>
