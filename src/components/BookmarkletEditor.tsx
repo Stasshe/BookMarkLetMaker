@@ -146,13 +146,26 @@ export function BookmarkletEditor() {
     try {
       const result = await minify(code, {
         compress: {
-          drop_console: false,
+          drop_console: true,
           drop_debugger: true,
+          passes: 3,
+          unsafe: true,
+          unsafe_arrows: true,
+          unsafe_methods: true,
+          unsafe_proto: true,
+          unsafe_undefined: true,
         },
-        mangle: false,
+        mangle: {
+          toplevel: true,
+        },
         format: {
           comments: false,
+          beautify: false,
         },
+        ecma: 2020,
+        toplevel: true,
+        keep_classnames: false,
+        keep_fnames: false,
       });
 
       const minifiedCode = result.code || code;
@@ -553,11 +566,6 @@ console.log('Ad elements hidden');`,
                     4
                   </div>
                   <p>Create a new bookmark in your browser and paste the code as the URL</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                    5
-                  </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
