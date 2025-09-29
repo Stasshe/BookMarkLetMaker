@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, basicSetup } from 'codemirror';
 import { useEffect, useRef, useState } from 'react';
+import { FiMaximize2, FiX } from 'react-icons/fi';
 import { minify } from 'terser';
 
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -85,6 +86,17 @@ export function BookmarkletEditor() {
       }
     }
   };
+  // 全画面プレビュー用
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // 全画面時のescキー対応
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
   // テストページのURL
   const testPageUrl = '/bookmarklet-test.html';
 
@@ -240,70 +252,31 @@ console.log('Ad elements hidden');`,
   const getByteLength = (str: string) => new TextEncoder().encode(str).length;
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="fixed top-6 right-6 z-50">
-        <ThemeToggle />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Editor Section */}
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold text-card-foreground">JavaScript Editor</h2>
-              <button
-                onClick={createBookmarklet}
-                disabled={isProcessing || !code.trim()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isProcessing ? 'Processing...' : 'Create Bookmarklet'}
-              </button>
-            </div>
-
-            <div className="border border-border rounded-md overflow-hidden">
-              <div
-                ref={editorRef}
-                className="min-h-[400px] max-h-[600px] overflow-auto"
-                style={{ maxHeight: 600 }}
-              />
-            </div>
+    <>
+      {/* 全画面プレビュー */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center">
+          <button
+            className="absolute top-6 right-6 text-white bg-black/60 rounded-full p-2 hover:bg-black/80 transition-colors"
+            onClick={() => setIsFullscreen(false)}
+            aria-label="全画面を閉じる"
+          >
+            <FiX size={28} />
+          </button>
+          <div className="w-full h-full flex items-center justify-center">
+            <iframe
+              ref={iframeRef}
+              src={testPageUrl}
+              title="Bookmarklet Test Page Fullscreen"
+              className="w-[90vw] h-[90vh] bg-white rounded-lg shadow-lg border"
+              style={{ background: 'white' }}
+              onLoad={() => setIframeLoaded(true)}
+            />
           </div>
-
-          {/* Examples */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-card-foreground mb-4">Examples</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {examples.map(example => (
-                <button
-                  key={example.name}
-                  onClick={() => loadExample(example.code)}
-                  className="p-3 text-left bg-muted hover:bg-muted/80 rounded-md transition-colors"
-                >
-                  <div className="font-medium text-sm">{example.name}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Live Preview Section */}
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-2xl font-semibold text-card-foreground mb-4">
-              Live Preview (Test Page)
-            </h2>
-            <div className="w-full h-[600px] border rounded-lg overflow-hidden">
-              <iframe
-                ref={iframeRef}
-                src={testPageUrl}
-                title="Bookmarklet Test Page"
-                className="w-full h-full bg-white"
-                onLoad={() => setIframeLoaded(true)}
-              />
-            </div>
-            {/* iframe consoleログ出力 */}
+          {/* iframeログ・エラーも全画面時に表示 */}
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-8 w-[min(700px,90vw)]">
             {iframeLogs.length > 0 && (
-              <div className="mt-4 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
+              <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
                 <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
                   Console Output
                 </div>
@@ -315,7 +288,6 @@ console.log('Ad elements hidden');`,
                 ))}
               </div>
             )}
-            {/* エラーログ（折りたたみ） */}
             {iframeError && (
               <div className="mt-3">
                 <button
@@ -331,137 +303,243 @@ console.log('Ad elements hidden');`,
                 )}
               </div>
             )}
-            <div className="mt-2 text-xs text-muted-foreground">
-              エディタのコードは即時でテストページに反映されます（minifyせず・デバウンス無し）。
-            </div>
           </div>
         </div>
+      )}
+      <div className="max-w-6xl mx-auto">
+        <div className="fixed top-6 right-6 z-50">
+          <ThemeToggle />
+        </div>
 
-        {/* Output Section */}
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-2xl font-semibold text-card-foreground mb-4">
-              Generated Bookmarklet Code
-            </h2>
-            {bookmarkletCode ? (
-              <div className="space-y-4">
-                <div className="bg-muted p-4 rounded-md border">
-                  <code className="text-sm break-all text-muted-foreground">
-                    {bookmarkletCode.length > 120
-                      ? `${bookmarkletCode.slice(0, 120)}...`
-                      : bookmarkletCode}
-                  </code>
-                </div>
-                {bookmarkletCode.length > 120 && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    ※ 全文はクリップボードにコピーされます
-                  </div>
-                )}
-                {/* 文字数・バイト数表示 */}
-                <div className="mt-2 text-xs text-muted-foreground flex gap-4">
-                  <span>文字数: {bookmarkletCode.length}文字</span>
-                  <span>容量: {getByteLength(bookmarkletCode)}バイト</span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={copyToClipboard}
-                    className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-                  >
-                    {copySuccess ? 'Copied!' : 'Copy to Clipboard'}
-                  </button>
-                  <button
-                    onClick={executeBookmarklet}
-                    className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/80 transition-colors"
-                  >
-                    Test Execute
-                  </button>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Editor Section */}
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-card-foreground">JavaScript Editor</h2>
+                <button
+                  onClick={createBookmarklet}
+                  disabled={isProcessing || !code.trim()}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isProcessing ? 'Processing...' : 'Create Bookmarklet'}
+                </button>
               </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <div className="text-4xl mb-4">📝</div>
-                <p>
-                  Write your JavaScript code and click Create Bookmarklet to generate the
-                  bookmarklet.
-                </p>
-              </div>
-            )}
-          </div>
 
-          {/* Instructions */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-card-foreground mb-4">How to Use</h3>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  1
-                </div>
-                <p>エディタでJavaScriptコードを編集すると、右のテストページに即時反映されます</p>
+              <div className="border border-border rounded-md overflow-hidden">
+                <div
+                  ref={editorRef}
+                  className="min-h-[400px] max-h-[600px] overflow-auto"
+                  style={{ maxHeight: 600 }}
+                />
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  2
-                </div>
-                <p>Click Create Bookmarklet to minify and wrap your code</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  3
-                </div>
-                <p>Copy the generated bookmarklet code</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  4
-                </div>
-                <p>Create a new bookmark in your browser and paste the code as the URL</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  5
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  5
-                </div>
-                <p>Click the bookmark on any webpage to execute your code</p>
+            </div>
+
+            {/* Examples */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-card-foreground mb-4">Examples</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {examples.map(example => (
+                  <button
+                    key={example.name}
+                    onClick={() => loadExample(example.code)}
+                    className="p-3 text-left bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                  >
+                    <div className="font-medium text-sm">{example.name}</div>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Features */}
-          <div className="bg-card border border-border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-card-foreground mb-4">Features</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Code minification</span>
+          {/* Live Preview Section */}
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6 relative">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-card-foreground">
+                  Live Preview (Test Page)
+                </h2>
+                <button
+                  className="ml-2 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                  onClick={() => setIsFullscreen(true)}
+                  aria-label="全画面表示"
+                >
+                  <FiMaximize2 size={22} />
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Comment removal</span>
+              <div className="w-full h-[600px] border rounded-lg overflow-hidden">
+                <iframe
+                  ref={iframeRef}
+                  src={testPageUrl}
+                  title="Bookmarklet Test Page"
+                  className="w-full h-full bg-white"
+                  onLoad={() => setIframeLoaded(true)}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Auto-encapsulation</span>
+              {/* iframe consoleログ出力 */}
+              {iframeLogs.length > 0 && (
+                <div className="mt-4 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
+                  <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
+                    Console Output
+                  </div>
+                  {iframeLogs.map((log, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="font-mono text-blue-700 dark:text-blue-300">
+                        [{log.type}]
+                      </span>{' '}
+                      <span className="break-all">{log.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* エラーログ（折りたたみ） */}
+              {iframeError && (
+                <div className="mt-3">
+                  <button
+                    className="text-xs text-red-600 underline mb-1"
+                    onClick={() => setShowIframeError(v => !v)}
+                  >
+                    {showIframeError ? 'エラー詳細を隠す' : 'エラー詳細を表示'}
+                  </button>
+                  {showIframeError && (
+                    <div className="bg-red-50 border border-red-200 text-red-800 rounded p-2 text-xs whitespace-pre-wrap">
+                      {iframeError}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="mt-2 text-xs text-muted-foreground">
+                エディタのコードは即時でテストページに反映されます（minifyせず・デバウンス無し）。
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Syntax highlighting</span>
+            </div>
+          </div>
+
+          {/* Output Section */}
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h2 className="text-2xl font-semibold text-card-foreground mb-4">
+                Generated Bookmarklet Code
+              </h2>
+              {bookmarkletCode ? (
+                <div className="space-y-4">
+                  <div className="bg-muted p-4 rounded-md border">
+                    <code className="text-sm break-all text-muted-foreground">
+                      {bookmarkletCode.length > 120
+                        ? `${bookmarkletCode.slice(0, 120)}...`
+                        : bookmarkletCode}
+                    </code>
+                  </div>
+                  {bookmarkletCode.length > 120 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      ※ 全文はクリップボードにコピーされます
+                    </div>
+                  )}
+                  {/* 文字数・バイト数表示 */}
+                  <div className="mt-2 text-xs text-muted-foreground flex gap-4">
+                    <span>文字数: {bookmarkletCode.length}文字</span>
+                    <span>容量: {getByteLength(bookmarkletCode)}バイト</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={copyToClipboard}
+                      className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                    >
+                      {copySuccess ? 'Copied!' : 'Copy to Clipboard'}
+                    </button>
+                    <button
+                      onClick={executeBookmarklet}
+                      className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/80 transition-colors"
+                    >
+                      Test Execute
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-4xl mb-4">📝</div>
+                  <p>
+                    Write your JavaScript code and click Create Bookmarklet to generate the
+                    bookmarklet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-card-foreground mb-4">How to Use</h3>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    1
+                  </div>
+                  <p>エディタでJavaScriptコードを編集すると、右のテストページに即時反映されます</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    2
+                  </div>
+                  <p>Click Create Bookmarklet to minify and wrap your code</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    3
+                  </div>
+                  <p>Copy the generated bookmarklet code</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    4
+                  </div>
+                  <p>Create a new bookmark in your browser and paste the code as the URL</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    5
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                    5
+                  </div>
+                  <p>Click the bookmark on any webpage to execute your code</p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Live testing</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Dark/Light theme</span>
+            </div>
+
+            {/* Features */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-card-foreground mb-4">Features</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Code minification</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Comment removal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Auto-encapsulation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Syntax highlighting</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Live testing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Dark/Light theme</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
