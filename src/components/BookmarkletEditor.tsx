@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
-import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorState } from '@codemirror/state';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { EditorView, basicSetup } from 'codemirror';
+import { useEffect, useRef, useState } from 'react';
 import { minify } from 'terser';
 
-import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const defaultCode = `// Example: Alert current page title
 alert('Current page: ' + document.title);
@@ -34,7 +34,7 @@ export function BookmarkletEditor() {
     const extensions = [
       basicSetup,
       javascript(),
-      EditorView.updateListener.of((update) => {
+      EditorView.updateListener.of(update => {
         if (update.docChanged) {
           setCode(update.state.doc.toString());
         }
@@ -60,7 +60,7 @@ export function BookmarkletEditor() {
     return () => {
       view.destroy();
     };
-  }, [theme]);
+  }, [theme, code]);
 
   const createBookmarklet = async () => {
     if (!code.trim()) return;
@@ -181,6 +181,9 @@ console.log('Ad elements hidden');`,
     },
   ];
 
+  // 文字数・バイト数計算用関数
+  const getByteLength = (str: string) => new TextEncoder().encode(str).length;
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="fixed top-6 right-6 z-50">
@@ -203,7 +206,11 @@ console.log('Ad elements hidden');`,
             </div>
 
             <div className="border border-border rounded-md overflow-hidden">
-              <div ref={editorRef} className="min-h-[400px]" />
+              <div
+                ref={editorRef}
+                className="min-h-[400px] max-h-[600px] overflow-auto"
+                style={{ maxHeight: 600 }}
+              />
             </div>
           </div>
 
@@ -211,7 +218,7 @@ console.log('Ad elements hidden');`,
           <div className="bg-card border border-border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-card-foreground mb-4">Examples</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {examples.map((example) => (
+              {examples.map(example => (
                 <button
                   key={example.name}
                   onClick={() => loadExample(example.code)}
@@ -227,16 +234,29 @@ console.log('Ad elements hidden');`,
         {/* Output Section */}
         <div className="space-y-6">
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-2xl font-semibold text-card-foreground mb-4">Generated Bookmarklet</h2>
-            
+            <h2 className="text-2xl font-semibold text-card-foreground mb-4">
+              Generated Bookmarklet
+            </h2>
             {bookmarkletCode ? (
               <div className="space-y-4">
                 <div className="bg-muted p-4 rounded-md border">
                   <code className="text-sm break-all text-muted-foreground">
-                    {bookmarkletCode}
+                    {bookmarkletCode.length > 120
+                      ? `${bookmarkletCode.slice(0, 120)}...`
+                      : bookmarkletCode}
                   </code>
                 </div>
 
+                {bookmarkletCode.length > 120 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    ※ 全文はクリップボードにコピーされます
+                  </div>
+                )}
+                {/* 文字数・バイト数表示 */}
+                <div className="mt-2 text-xs text-muted-foreground flex gap-4">
+                  <span>文字数: {bookmarkletCode.length}文字</span>
+                  <span>容量: {getByteLength(bookmarkletCode)}バイト</span>
+                </div>
                 <div className="flex gap-3">
                   <button
                     onClick={copyToClipboard}
@@ -255,7 +275,10 @@ console.log('Ad elements hidden');`,
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <div className="text-4xl mb-4">📝</div>
-                <p>Write your JavaScript code and click "Create Bookmarklet" to generate the bookmarklet.</p>
+                <p>
+                  Write your JavaScript code and click Create Bookmarklet to generate the
+                  bookmarklet.
+                </p>
               </div>
             )}
           </div>
@@ -274,7 +297,7 @@ console.log('Ad elements hidden');`,
                 <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
                   2
                 </div>
-                <p>Click "Create Bookmarklet" to minify and wrap your code</p>
+                <p>Click Create Bookmarklet to minify and wrap your code</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
