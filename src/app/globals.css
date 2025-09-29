@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CodeMirror custom styles */
+.cm-editor {
+  font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+}
+
+.cm-focused {
+  outline: none;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
