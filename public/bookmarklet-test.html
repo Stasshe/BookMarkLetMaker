@@ -56,6 +56,50 @@
     <div class="popup">ポップアップ（popupクラス）</div>
     <img class="img-sample" src="https://placehold.co/80x80" alt="サンプル画像" />
     <img class="img-sample" src="https://placehold.co/80x80/EEE/333?text=IMG" alt="サンプル画像2" />
+    <form style="margin: 16px 0;">
+      <label>名前: <input type="text" name="name" /></label>
+      <label>パスワード: <input type="password" name="pw" /></label>
+      <label>色: <input type="color" name="color" value="#3182ce" /></label>
+      <button type="submit">送信</button>
+      <input type="reset" value="リセット" />
+    </form>
+    <ul>
+      <li>リスト項目1</li>
+      <li>リスト項目2</li>
+      <li>リスト項目3</li>
+    </ul>
+    <ol>
+      <li>番号付きリスト1</li>
+      <li>番号付きリスト2</li>
+    </ol>
+    <table border="1" style="margin: 16px 0; border-collapse: collapse;">
+      <caption>サンプルテーブル</caption>
+      <thead><tr><th>名前</th><th>値</th></tr></thead>
+      <tbody>
+        <tr><td>テストA</td><td>123</td></tr>
+        <tr><td>テストB</td><td>456</td></tr>
+      </tbody>
+    </table>
+    <details style="margin: 16px 0;"><summary>詳細を表示</summary>これはdetails/summary要素です。</details>
+    <blockquote cite="https://example.com">これは引用（blockquote）です。</blockquote>
+    <pre><code>const x = 10;
+console.log(x);</code></pre>
+    <progress value="70" max="100" style="width: 200px;">70%</progress>
+    <meter value="0.6">60%</meter>
+    <div style="margin: 16px 0;">
+      <svg width="60" height="60">
+        <circle cx="30" cy="30" r="25" fill="#4dd0e1" stroke="#333" stroke-width="2" />
+        <text x="30" y="35" font-size="16" text-anchor="middle" fill="#333">SVG</text>
+      </svg>
+    </div>
+    <video width="200" controls style="margin: 8px 0;">
+      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+      動画が再生できません。
+    </video>
+    <audio controls style="margin: 8px 0;">
+      <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg" />
+      音声が再生できません。
+    </audio>
     <p>テキスト: これはテスト用のテキストです。Bookmarkletでハイライトできます。</p>
     <p>テキスト: もう一つのテスト文です。リンクや画像も含まれています。</p>
   </body>
