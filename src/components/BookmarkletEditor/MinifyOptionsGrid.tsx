@@ -1,13 +1,75 @@
 // Minifyオプション設定UI
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
 
+type MinifyOptions = {
+  compress: {
+    arrows: boolean;
+    booleans: boolean;
+    collapse_vars: boolean;
+    comparisons: boolean;
+    computed_props: boolean;
+    conditionals: boolean;
+    dead_code: boolean;
+    drop_console: boolean;
+    drop_debugger: boolean;
+    evaluate: boolean;
+    hoist_funs: boolean;
+    hoist_props: boolean;
+    hoist_vars: boolean;
+    if_return: boolean;
+    inline: boolean;
+    join_vars: boolean;
+    keep_fargs: boolean;
+    keep_fnames: boolean;
+    keep_infinity: boolean;
+    loops: boolean;
+    negate_iife: boolean;
+    passes: number;
+    properties: boolean;
+    reduce_funcs: boolean;
+    reduce_vars: boolean;
+    sequences: boolean;
+    side_effects: boolean;
+    switches: boolean;
+    toplevel: boolean;
+    typeofs: boolean;
+    unsafe: boolean;
+    unsafe_arrows: boolean;
+    unsafe_comps: boolean;
+    unsafe_Function: boolean;
+    unsafe_math: boolean;
+    unsafe_methods: boolean;
+    unsafe_proto: boolean;
+    unsafe_regexp: boolean;
+    unsafe_undefined: boolean;
+    unused: boolean;
+  };
+  mangle: {
+    toplevel: boolean;
+    properties: boolean;
+    keep_classnames: boolean;
+    keep_fnames: boolean;
+    module: boolean;
+    safari10: boolean;
+  };
+  format: {
+    comments: boolean;
+    beautify: boolean;
+    semicolons: boolean;
+  };
+  ecma: number;
+  toplevel: boolean;
+  keep_classnames: boolean;
+  keep_fnames: boolean;
+};
+
 type MinifyOptionsGridProps = {
   show: boolean;
   setShow: (v: (prev: boolean) => boolean) => void;
-  minifyOptions: any;
-  handleMinifyOptionChange: (group: string, key: string, value: any) => void;
-  getDefaultMinifyOptions: () => any;
-  setMinifyOptions: (opts: any) => void;
+  minifyOptions: MinifyOptions;
+  handleMinifyOptionChange: (group: string, key: string, value: unknown) => void;
+  getDefaultMinifyOptions: () => MinifyOptions;
+  setMinifyOptions: (opts: MinifyOptions) => void;
 };
 
 export default function MinifyOptionsGrid({
@@ -28,13 +90,11 @@ export default function MinifyOptionsGrid({
           aria-controls="minify-options-panel"
           type="button"
         >
-          {show ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}Minifyオプション詳細設定
+          {show ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}
+          Minifyオプション詳細設定
         </button>
         {show && (
-          <div
-            id="minify-options-panel"
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 relative"
-          >
+          <div id="minify-options-panel" className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
             {/* compress */}
             <div>
               <div className="font-bold mb-2">compress</div>
@@ -43,50 +103,69 @@ export default function MinifyOptionsGrid({
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.drop_console}
-                    onChange={e => handleMinifyOptionChange('compress', 'drop_console', e.target.checked)}
-                  /> drop_console
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'drop_console', e.target.checked)
+                    }
+                  />{' '}
+                  drop_console
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.drop_debugger}
-                    onChange={e => handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)}
-                  /> drop_debugger
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)
+                    }
+                  />{' '}
+                  drop_debugger
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.unsafe}
                     onChange={e => handleMinifyOptionChange('compress', 'unsafe', e.target.checked)}
-                  /> unsafe
+                  />{' '}
+                  unsafe
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.unsafe_arrows}
-                    onChange={e => handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)}
-                  /> unsafe_arrows
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)
+                    }
+                  />{' '}
+                  unsafe_arrows
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.unsafe_methods}
-                    onChange={e => handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)}
-                  /> unsafe_methods
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)
+                    }
+                  />{' '}
+                  unsafe_methods
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.unsafe_proto}
-                    onChange={e => handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)}
-                  /> unsafe_proto
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)
+                    }
+                  />{' '}
+                  unsafe_proto
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.compress.unsafe_undefined}
-                    onChange={e => handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)}
-                  /> unsafe_undefined
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)
+                    }
+                  />{' '}
+                  unsafe_undefined
                 </label>
                 <label>
                   passes
@@ -95,7 +174,9 @@ export default function MinifyOptionsGrid({
                     min={1}
                     max={10}
                     value={minifyOptions.compress.passes}
-                    onChange={e => handleMinifyOptionChange('compress', 'passes', Number(e.target.value))}
+                    onChange={e =>
+                      handleMinifyOptionChange('compress', 'passes', Number(e.target.value))
+                    }
                     className="ml-2 w-16 border rounded px-1 py-0.5 text-black bg-white"
                   />
                 </label>
@@ -110,42 +191,54 @@ export default function MinifyOptionsGrid({
                     type="checkbox"
                     checked={minifyOptions.mangle.toplevel}
                     onChange={e => handleMinifyOptionChange('mangle', 'toplevel', e.target.checked)}
-                  /> toplevel
+                  />{' '}
+                  toplevel
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.mangle.properties}
-                    onChange={e => handleMinifyOptionChange('mangle', 'properties', e.target.checked)}
-                  /> properties
+                    onChange={e =>
+                      handleMinifyOptionChange('mangle', 'properties', e.target.checked)
+                    }
+                  />{' '}
+                  properties
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.mangle.keep_classnames}
-                    onChange={e => handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)}
-                  /> keep_classnames
+                    onChange={e =>
+                      handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)
+                    }
+                  />{' '}
+                  keep_classnames
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.mangle.keep_fnames}
-                    onChange={e => handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)}
-                  /> keep_fnames
+                    onChange={e =>
+                      handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)
+                    }
+                  />{' '}
+                  keep_fnames
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.mangle.module}
                     onChange={e => handleMinifyOptionChange('mangle', 'module', e.target.checked)}
-                  /> module
+                  />{' '}
+                  module
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.mangle.safari10}
                     onChange={e => handleMinifyOptionChange('mangle', 'safari10', e.target.checked)}
-                  /> safari10
+                  />{' '}
+                  safari10
                 </label>
               </div>
             </div>
@@ -158,14 +251,30 @@ export default function MinifyOptionsGrid({
                     type="checkbox"
                     checked={minifyOptions.format.comments}
                     onChange={e => handleMinifyOptionChange('format', 'comments', e.target.checked)}
-                  /> comments
+                  />{' '}
+                  comments
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.format.beautify}
                     onChange={e => handleMinifyOptionChange('format', 'beautify', e.target.checked)}
-                  /> beautify
+                  />{' '}
+                  beautify
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={minifyOptions.format.semicolons === false}
+                    onChange={e =>
+                      handleMinifyOptionChange(
+                        'format',
+                        'semicolons',
+                        !e.target.checked ? undefined : false
+                      )
+                    }
+                  />{' '}
+                  Semicolon
                 </label>
               </div>
             </div>
@@ -195,21 +304,28 @@ export default function MinifyOptionsGrid({
                     type="checkbox"
                     checked={minifyOptions.toplevel}
                     onChange={e => handleMinifyOptionChange('root', 'toplevel', e.target.checked)}
-                  /> toplevel
+                  />{' '}
+                  toplevel
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.keep_classnames}
-                    onChange={e => handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)}
-                  /> keep_classnames
+                    onChange={e =>
+                      handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)
+                    }
+                  />{' '}
+                  keep_classnames
                 </label>
                 <label>
                   <input
                     type="checkbox"
                     checked={minifyOptions.keep_fnames}
-                    onChange={e => handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)}
-                  /> keep_fnames
+                    onChange={e =>
+                      handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)
+                    }
+                  />{' '}
+                  keep_fnames
                 </label>
               </div>
             </div>

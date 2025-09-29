@@ -150,6 +150,7 @@ export function BookmarkletEditor() {
     format: {
       comments: false,
       beautify: false,
+      semicolons: false,
     },
     ecma: 2020,
     toplevel: true,
