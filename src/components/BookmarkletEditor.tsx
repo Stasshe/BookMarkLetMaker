@@ -23,6 +23,7 @@ document.querySelectorAll('a').forEach(link => {
 export function BookmarkletEditor() {
   // --- iframe consoleログ管理 ---
   const [iframeLogs, setIframeLogs] = useState<Array<{ type: string; value: string }>>([]);
+  const [code, setCode] = useState(defaultCode);
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data && event.data.__bm_console) {
@@ -35,7 +36,7 @@ export function BookmarkletEditor() {
   const { theme } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const [code, setCode] = useState(defaultCode);
+  // ...existing code...
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -122,10 +123,21 @@ export function BookmarkletEditor() {
       parent: editorRef.current,
     });
     viewRef.current = view;
+
+    // Alt+Up/DownでスクロールしないようにpreventDefault
+    const handler = (e: KeyboardEvent) => {
+      if ((e.altKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+      }
+    };
+    const dom = view.dom;
+    dom.addEventListener('keydown', handler);
+
     return () => {
+      dom.removeEventListener('keydown', handler);
       view.destroy();
     };
-  }, [theme, code]);
+  }, [theme]);
 
   const createBookmarklet = async () => {
     if (!code.trim()) return;
@@ -179,7 +191,6 @@ export function BookmarkletEditor() {
       alert('Error executing bookmarklet: ' + error);
     }
   };
-
   const loadExample = (exampleCode: string) => {
     setCode(exampleCode);
     if (viewRef.current) {
@@ -191,6 +202,8 @@ export function BookmarkletEditor() {
         },
       });
       viewRef.current.dispatch(transaction);
+      // フォーカス維持
+      viewRef.current.focus();
     }
   };
 
