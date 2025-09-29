@@ -26,6 +26,8 @@ import LivePreviewGrid from './BookmarkletEditor/LivePreviewGrid';
 import MinifyOptionsGrid from './BookmarkletEditor/MinifyOptionsGrid';
 import OutputGrid from './BookmarkletEditor/OutputGrid';
 
+import { QRCodeGenerator } from './BookmarkletEditor/QRCodeGenerator';
+
 const defaultCode = `// Example: Alert current page title
 alert('Current page: ' + document.title);
 
@@ -348,7 +350,17 @@ export function BookmarkletEditor() {
   // iframeへの注入のみ
   const runInIframe = () => {
     animateButton(runBtnRef);
-    injectCodeToIframe(code);
+    // Reset logs and error before each run
+    setIframeLogs([]);
+    setIframeError(null);
+    // If iframe is not loaded, force reload
+    if (!iframeLoaded && iframeRef.current) {
+      setIframeLoaded(false);
+      iframeRef.current.src = testPageUrl;
+      // injectCodeToIframe will be called onLoad
+    } else {
+      injectCodeToIframe(code);
+    }
   };
 
   const copyToClipboard = async () => {
@@ -488,7 +500,9 @@ console.log('Ad elements hidden');`,
           <div className="absolute left-1/2 -translate-x-1/2 bottom-8 w-[min(700px,90vw)]">
             {iframeLogs.length > 0 && (
               <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
-                <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">Console Output</div>
+                <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
+                  Console Output
+                </div>
                 {iframeLogs.map((log, i) => (
                   <div key={i} className="mb-1">
                     <span className="font-mono text-blue-700 dark:text-blue-300">[{log.type}]</span>{' '}
@@ -542,6 +556,16 @@ console.log('Ad elements hidden');`,
               handleHistoryDelete={handleHistoryDelete}
               bookmarkletCode={bookmarkletCode}
             />
+            {/* QRコードを左側に移動 */}
+            <div className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-sm">
+              <div className="font-semibold text-neutral-700 dark:text-neutral-200 mb-1">
+                QRコードで共有
+              </div>
+              <QRCodeGenerator value={bookmarkletCode} size={180} />
+              <div className="text-xs text-neutral-500">
+                スマートフォンでスキャンしてブックマークレットを追加できます
+              </div>
+            </div>
           </div>
           <div className="space-y-6">
             <LivePreviewGrid
@@ -556,6 +580,7 @@ console.log('Ad elements hidden');`,
               iframeError={iframeError}
               showIframeError={showIframeError}
               setShowIframeError={setShowIframeError}
+              runBtnRef={runBtnRef}
             />
             <OutputGrid
               bookmarkletCode={bookmarkletCode}

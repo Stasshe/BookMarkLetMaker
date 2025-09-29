@@ -1,4 +1,6 @@
 // ライブプレビュー
+
+import React from 'react';
 import { FiMaximize2 } from 'react-icons/fi';
 
 type LivePreviewGridProps = {
@@ -13,6 +15,7 @@ type LivePreviewGridProps = {
   iframeError: string | null;
   showIframeError: boolean;
   setShowIframeError: (v: (prev: boolean) => boolean) => void;
+  runBtnRef: React.RefObject<HTMLButtonElement>;
 };
 
 export default function LivePreviewGrid({
@@ -26,6 +29,7 @@ export default function LivePreviewGrid({
   iframeError,
   showIframeError,
   setShowIframeError,
+  runBtnRef,
 }: LivePreviewGridProps) {
   return (
     <div className="bg-card border border-border rounded-lg p-6 relative">
@@ -33,6 +37,7 @@ export default function LivePreviewGrid({
         <h2 className="text-2xl font-semibold text-card-foreground">Live Preview (Test Page)</h2>
         <div className="flex gap-2 items-center">
           <button
+            ref={runBtnRef}
             onClick={runInIframe}
             disabled={!code.trim()}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -60,7 +65,9 @@ export default function LivePreviewGrid({
       {/* iframe consoleログ出力 */}
       {iframeLogs.length > 0 && (
         <div className="mt-4 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
-          <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">Console Output</div>
+          <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
+            Console Output
+          </div>
           {iframeLogs.map((log, i) => (
             <div key={i} className="mb-1">
               <span className="font-mono text-blue-700 dark:text-blue-300">[{log.type}]</span>{' '}
