@@ -461,19 +461,58 @@ console.log('Ad elements hidden');`,
                     <span>文字数: {bookmarkletCode.length}文字</span>
                     <span>容量: {getByteLength(bookmarkletCode)}バイト</span>
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={copyToClipboard}
-                      className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-                    >
-                      {copySuccess ? 'Copied!' : 'Copy to Clipboard'}
-                    </button>
-                    <button
-                      onClick={executeBookmarklet}
-                      className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/80 transition-colors"
-                    >
-                      Test Execute
-                    </button>
+                  <div className="mt-6">
+                    <div className="text-sm font-semibold text-card-foreground mb-2">操作</div>
+                    <div className="flex flex-col gap-4">
+                      <button
+                        onClick={copyToClipboard}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 text-base font-bold rounded-lg bg-primary text-primary-foreground shadow hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60"
+                        style={{ letterSpacing: '0.02em' }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 16h8a2 2 0 002-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v6a2 2 0 002 2z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"
+                          />
+                        </svg>
+                        {copySuccess ? 'コピーしました！' : 'クリップボードにコピー'}
+                      </button>
+                      <button
+                        onClick={executeBookmarklet}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 text-base font-bold rounded-lg bg-accent text-accent-foreground shadow hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/60"
+                        style={{ letterSpacing: '0.02em' }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 12h14M12 5l7 7-7 7"
+                          />
+                        </svg>
+                        その場で実行
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
