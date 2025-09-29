@@ -18,6 +18,7 @@ import {
   deleteHistory,
   getAllHistory,
 } from '@/utils/bookmarkletHistoryDB';
+import { formatCodeWithPrettier } from '../utils/prettierFormat';
 import EditorGrid from './BookmarkletEditor/EditorGrid';
 import ExamplesGrid from './BookmarkletEditor/ExamplesGrid';
 import HistoryGrid from './BookmarkletEditor/HistoryGrid';
@@ -426,6 +427,31 @@ export function BookmarkletEditor() {
   // 文字数・バイト数計算用関数
   const getByteLength = (str: string) => new TextEncoder().encode(str).length;
 
+  // コードフォーマット機能
+  const [isFormatting, setIsFormatting] = useState(false);
+  const handleFormatCode = async () => {
+    if (!code.trim()) return;
+    setIsFormatting(true);
+    try {
+      const formatted = await formatCodeWithPrettier(code);
+      setCode(formatted);
+      if (viewRef.current) {
+        const transaction = viewRef.current.state.update({
+          changes: {
+            from: 0,
+            to: viewRef.current.state.doc.length,
+            insert: formatted,
+          },
+        });
+        viewRef.current.dispatch(transaction);
+        viewRef.current.focus();
+      }
+    } catch (e) {
+      alert('フォーマットに失敗しました');
+    }
+    setIsFormatting(false);
+  };
+
   // サンプル一覧（public/example/配下のファイル名と説明）
   const examples = [
     {
@@ -534,6 +560,17 @@ export function BookmarkletEditor() {
               createBookmarklet={createBookmarklet}
               isProcessing={isProcessing}
             />
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 rounded-md bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ minWidth: 120 }}
+                onClick={handleFormatCode}
+                disabled={isFormatting}
+                aria-label="コードをフォーマット"
+              >
+                {isFormatting ? '整形中...' : 'コードをフォーマット'}
+              </button>
+            </div>
             <ExamplesGrid examples={examples} loadExample={loadExample} />
             <HistoryGrid
               history={history}
