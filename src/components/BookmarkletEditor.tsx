@@ -20,6 +20,17 @@ document.querySelectorAll('a').forEach(link => {
 });`;
 
 export function BookmarkletEditor() {
+  // --- iframe consoleログ管理 ---
+  const [iframeLogs, setIframeLogs] = useState<Array<{ type: string; value: string }>>([]);
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data && event.data.__bm_console) {
+        setIframeLogs(logs => [...logs, { type: event.data.type, value: event.data.value }]);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
   const { theme } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -27,11 +38,55 @@ export function BookmarkletEditor() {
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  // バウンス中フラグ
-  const [isDebouncing, setIsDebouncing] = useState(false);
-
-  // バウンス用タイマーref
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  // --- ライブプレビュー用 ---
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeError, setIframeError] = useState<string | null>(null);
+  const [showIframeError, setShowIframeError] = useState(false);
+  const injectCodeToIframe = (jsCode: string) => {
+    if (!iframeRef.current || !iframeLoaded) return;
+    try {
+      const win = iframeRef.current.contentWindow;
+      if (!win) return;
+      // 既存のscriptタグを削除
+      const scripts = win.document.querySelectorAll('script[data-bm]');
+      scripts.forEach(s => s.remove());
+      // consoleフック用スクリプト
+      const hookScript = win.document.createElement('script');
+      hookScript.setAttribute('data-bm', '1');
+      hookScript.type = 'text/javascript';
+      hookScript.text = `
+        (function() {
+          const send = (type, value) => {
+            window.parent.postMessage({ __bm_console: true, type, value: typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value) }, '*');
+          };
+          ['log','dir'].forEach(fn => {
+            const orig = console[fn];
+            console[fn] = function(...args) {
+              args.forEach(a => send(fn, a));
+              orig.apply(console, args);
+            };
+          });
+        })();
+      `;
+      win.document.body.appendChild(hookScript);
+      // 新しいユーザーコードスクリプト
+      const script = win.document.createElement('script');
+      script.setAttribute('data-bm', '1');
+      script.type = 'text/javascript';
+      script.text = jsCode;
+      win.document.body.appendChild(script);
+      setIframeError(null);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setIframeError(e.message);
+      } else {
+        setIframeError(String(e));
+      }
+    }
+  };
+  // テストページのURL
+  const testPageUrl = '/bookmarklet-test.html';
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -39,38 +94,24 @@ export function BookmarkletEditor() {
     const handleDocChange = (update: { docChanged: boolean; state: EditorState }) => {
       if (update.docChanged) {
         setCode(update.state.doc.toString());
-        // バウンス: 3秒間変更がなければcreateBookmarklet実行
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        setIsDebouncing(true);
-        debounceTimer.current = setTimeout(() => {
-          createBookmarklet();
-          setIsDebouncing(false);
-        }, 3000);
       }
     };
 
     const extensions = [basicSetup, javascript(), EditorView.updateListener.of(handleDocChange)];
-
     if (theme === 'dark') {
       extensions.push(oneDark);
     }
-
     const state = EditorState.create({
       doc: code,
       extensions,
     });
-
     const view = new EditorView({
       state,
       parent: editorRef.current,
     });
-
     viewRef.current = view;
-
     return () => {
       view.destroy();
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      setIsDebouncing(false);
     };
   }, [theme, code]);
 
@@ -93,10 +134,12 @@ export function BookmarkletEditor() {
       const minifiedCode = result.code || code;
       const wrappedCode = `javascript:(function(){${minifiedCode}})();`;
       setBookmarkletCode(wrappedCode);
+      injectCodeToIframe(code);
     } catch (error) {
       console.error('Minification error:', error);
       const wrappedCode = `javascript:(function(){${code}})();`;
       setBookmarkletCode(wrappedCode);
+      injectCodeToIframe(code);
     }
     setIsProcessing(false);
   };
@@ -243,19 +286,63 @@ console.log('Ad elements hidden');`,
           </div>
         </div>
 
+        {/* Live Preview Section */}
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-card-foreground mb-4">
+              Live Preview (Test Page)
+            </h2>
+            <div className="w-full h-[600px] border rounded-lg overflow-hidden">
+              <iframe
+                ref={iframeRef}
+                src={testPageUrl}
+                title="Bookmarklet Test Page"
+                className="w-full h-full bg-white"
+                onLoad={() => setIframeLoaded(true)}
+              />
+            </div>
+            {/* iframe consoleログ出力 */}
+            {iframeLogs.length > 0 && (
+              <div className="mt-4 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded p-2 text-xs max-h-40 overflow-auto">
+                <div className="font-bold mb-1 text-neutral-700 dark:text-neutral-300">
+                  Console Output
+                </div>
+                {iframeLogs.map((log, i) => (
+                  <div key={i} className="mb-1">
+                    <span className="font-mono text-blue-700 dark:text-blue-300">[{log.type}]</span>{' '}
+                    <span className="break-all">{log.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* エラーログ（折りたたみ） */}
+            {iframeError && (
+              <div className="mt-3">
+                <button
+                  className="text-xs text-red-600 underline mb-1"
+                  onClick={() => setShowIframeError(v => !v)}
+                >
+                  {showIframeError ? 'エラー詳細を隠す' : 'エラー詳細を表示'}
+                </button>
+                {showIframeError && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 rounded p-2 text-xs whitespace-pre-wrap">
+                    {iframeError}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="mt-2 text-xs text-muted-foreground">
+              エディタのコードは即時でテストページに反映されます（minifyせず・デバウンス無し）。
+            </div>
+          </div>
+        </div>
+
         {/* Output Section */}
         <div className="space-y-6">
           <div className="bg-card border border-border rounded-lg p-6">
             <h2 className="text-2xl font-semibold text-card-foreground mb-4">
-              Generated Bookmarklet
+              Generated Bookmarklet Code
             </h2>
-            {/* バウンス中アニメーション */}
-            {isDebouncing && (
-              <div className="flex items-center gap-2 mb-3">
-                <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs text-primary">自動生成まで3秒待機中...</span>
-              </div>
-            )}
             {bookmarkletCode ? (
               <div className="space-y-4">
                 <div className="bg-muted p-4 rounded-md border">
@@ -265,7 +352,6 @@ console.log('Ad elements hidden');`,
                       : bookmarkletCode}
                   </code>
                 </div>
-
                 {bookmarkletCode.length > 120 && (
                   <div className="mt-2 text-xs text-muted-foreground">
                     ※ 全文はクリップボードにコピーされます
@@ -310,7 +396,7 @@ console.log('Ad elements hidden');`,
                 <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
                   1
                 </div>
-                <p>Write or paste your JavaScript code in the editor</p>
+                <p>エディタでJavaScriptコードを編集すると、右のテストページに即時反映されます</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
@@ -329,6 +415,11 @@ console.log('Ad elements hidden');`,
                   4
                 </div>
                 <p>Create a new bookmark in your browser and paste the code as the URL</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                  5
+                </div>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
