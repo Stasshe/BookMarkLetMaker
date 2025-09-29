@@ -27,19 +27,29 @@ export function BookmarkletEditor() {
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  // バウンス中フラグ
+  const [isDebouncing, setIsDebouncing] = useState(false);
+
+  // バウンス用タイマーref
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!editorRef.current) return;
 
-    const extensions = [
-      basicSetup,
-      javascript(),
-      EditorView.updateListener.of(update => {
-        if (update.docChanged) {
-          setCode(update.state.doc.toString());
-        }
-      }),
-    ];
+    const handleDocChange = (update: { docChanged: boolean; state: EditorState }) => {
+      if (update.docChanged) {
+        setCode(update.state.doc.toString());
+        // バウンス: 3秒間変更がなければcreateBookmarklet実行
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        setIsDebouncing(true);
+        debounceTimer.current = setTimeout(() => {
+          createBookmarklet();
+          setIsDebouncing(false);
+        }, 3000);
+      }
+    };
+
+    const extensions = [basicSetup, javascript(), EditorView.updateListener.of(handleDocChange)];
 
     if (theme === 'dark') {
       extensions.push(oneDark);
@@ -59,6 +69,8 @@ export function BookmarkletEditor() {
 
     return () => {
       view.destroy();
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      setIsDebouncing(false);
     };
   }, [theme, code]);
 
@@ -237,6 +249,13 @@ console.log('Ad elements hidden');`,
             <h2 className="text-2xl font-semibold text-card-foreground mb-4">
               Generated Bookmarklet
             </h2>
+            {/* バウンス中アニメーション */}
+            {isDebouncing && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-primary">自動生成まで3秒待機中...</span>
+              </div>
+            )}
             {bookmarkletCode ? (
               <div className="space-y-4">
                 <div className="bg-muted p-4 rounded-md border">
