@@ -10,8 +10,15 @@ import { useEffect, useRef, useState } from 'react';
 import { FiChevronDown, FiChevronRight, FiMaximize2, FiX } from 'react-icons/fi';
 import { minify } from 'terser';
 
+import { HistoryList } from '@/components/HistoryList';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/contexts/ThemeContext';
+import {
+  BookmarkletHistoryItem,
+  addHistory,
+  deleteHistory,
+  getAllHistory,
+} from '@/utils/bookmarkletHistoryDB';
 
 const defaultCode = `// Example: Alert current page title
 alert('Current page: ' + document.title);
@@ -25,6 +32,62 @@ document.querySelectorAll('a').forEach(link => {
 export function BookmarkletEditor() {
   // --- Minifyオプション管理 ---
   const [showMinifyOptions, setShowMinifyOptions] = useState(false); // 初期状態: 閉じている
+  // --- 履歴管理 ---
+  const [history, setHistory] = useState<BookmarkletHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyTitle, setHistoryTitle] = useState('');
+
+  // 履歴取得
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const items = await getAllHistory();
+      setHistory(items);
+    } catch (e) {
+      setHistoryError('履歴の取得に失敗しました');
+    }
+    setHistoryLoading(false);
+  };
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  // 履歴保存
+  const saveToHistory = async (code: string, bookmarkletCode: string) => {
+    let title = historyTitle.trim();
+    if (!title) {
+      const firstLine = (code || '').split('\n')[0] || '';
+      title = firstLine.slice(0, 32) || '無題';
+    }
+    await addHistory({ title, code, bookmarkletCode });
+    setHistoryTitle('');
+    await loadHistory();
+  };
+
+  // 履歴からエディタへ復元
+  const handleHistorySelect = (item: BookmarkletHistoryItem) => {
+    if (!window.confirm('この履歴の内容でエディタを上書きします。よろしいですか？')) return;
+    if (viewRef.current) {
+      const transaction = viewRef.current.state.update({
+        changes: {
+          from: 0,
+          to: viewRef.current.state.doc.length,
+          insert: item.code,
+        },
+      });
+      viewRef.current.dispatch(transaction);
+      viewRef.current.focus();
+    }
+    setCode(item.code);
+  };
+
+  // 履歴削除
+  const handleHistoryDelete = async (id: string) => {
+    await deleteHistory(id);
+    await loadHistory();
+  };
   const getDefaultMinifyOptions = () => ({
     compress: {
       arrows: true,
@@ -256,6 +319,7 @@ export function BookmarkletEditor() {
     animateButton(createBtnRef);
     if (!code.trim()) return;
     setIsProcessing(true);
+    let wrappedCode = '';
     try {
       const result = await minify(code, {
         ...minifyOptions,
@@ -265,11 +329,11 @@ export function BookmarkletEditor() {
         ecma: minifyOptions.ecma as any,
       });
       const minifiedCode = result.code || code;
-      const wrappedCode = `javascript:(function(){${minifiedCode}})();`;
+      wrappedCode = `javascript:(function(){${minifiedCode}})();`;
       setBookmarkletCode(wrappedCode);
     } catch (error) {
       console.error('Minification error:', error);
-      const wrappedCode = `javascript:(function(){${code}})();`;
+      wrappedCode = `javascript:(function(){${code}})();`;
       setBookmarkletCode(wrappedCode);
     }
     setIsProcessing(false);
@@ -749,6 +813,43 @@ console.log('Ad elements hidden');`,
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Bookmarklet履歴 */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
+                履歴
+                <span className="text-xs text-muted-foreground font-normal">（最大100件程度）</span>
+              </h3>
+              <div className="mb-3 flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 px-2 py-1 border rounded text-sm bg-background text-foreground"
+                  placeholder="タイトル（省略可）"
+                  value={historyTitle}
+                  onChange={e => setHistoryTitle(e.target.value)}
+                  maxLength={32}
+                />
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-xs font-semibold disabled:opacity-50"
+                  disabled={!code.trim()}
+                  onClick={() => saveToHistory(code, bookmarkletCode)}
+                >
+                  履歴に保存
+                </button>
+              </div>
+              {historyLoading ? (
+                <div className="text-muted-foreground text-sm py-8 text-center">読み込み中...</div>
+              ) : historyError ? (
+                <div className="text-destructive text-sm py-8 text-center">{historyError}</div>
+              ) : (
+                <HistoryList
+                  items={history}
+                  onSelect={handleHistorySelect}
+                  onDelete={handleHistoryDelete}
+                />
+              )}
             </div>
           </div>
 
