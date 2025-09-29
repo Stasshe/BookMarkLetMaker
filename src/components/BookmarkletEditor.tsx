@@ -263,15 +263,24 @@ console.log('Ad elements hidden');`,
           >
             <FiX size={28} />
           </button>
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
             <iframe
               ref={iframeRef}
               src={testPageUrl}
               title="Bookmarklet Test Page Fullscreen"
               className="w-[90vw] h-[90vh] bg-white rounded-lg shadow-lg border"
               style={{ background: 'white' }}
-              onLoad={() => setIframeLoaded(true)}
+              onLoad={() => {
+                setIframeLoaded(true);
+                injectCodeToIframe(code);
+              }}
             />
+            <button
+              className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              onClick={() => injectCodeToIframe(code)}
+            >
+              ブックマークレットを手動で実行
+            </button>
           </div>
           {/* iframeログ・エラーも全画面時に表示 */}
           <div className="absolute left-1/2 -translate-x-1/2 bottom-8 w-[min(700px,90vw)]">
