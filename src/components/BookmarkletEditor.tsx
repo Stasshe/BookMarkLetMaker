@@ -1,9 +1,11 @@
+/* eslint-disable */
 'use client';
 
 import { javascript } from '@codemirror/lang-javascript';
 import { EditorState } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, basicSetup } from 'codemirror';
+import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
 import { FiChevronDown, FiChevronRight, FiMaximize2, FiX } from 'react-icons/fi';
 import { minify } from 'terser';
@@ -83,7 +85,7 @@ export function BookmarkletEditor() {
     keep_classnames: false,
     keep_fnames: false,
   });
-  const [minifyOptions, setMinifyOptions] = useState(getDefaultMinifyOptions())
+  const [minifyOptions, setMinifyOptions] = useState(getDefaultMinifyOptions());
 
   // オプション変更ハンドラ
   const handleMinifyOptionChange = (group: string, key: string, value: any) => {
@@ -116,7 +118,41 @@ export function BookmarkletEditor() {
   const [bookmarkletCode, setBookmarkletCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  // --- ライブプレビュー用 ---
+  // --- ボタンアニメーション用 ---
+  const runBtnRef = useRef<HTMLButtonElement>(null);
+  const createBtnRef = useRef<HTMLButtonElement>(null);
+
+  // コーポレート感重視の上品なボタンアニメーション
+  const animateButton = (ref: React.RefObject<HTMLButtonElement | null>) => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const originalBg = el.style.backgroundColor;
+    gsap.fromTo(
+      el,
+      {
+        scale: 1,
+        boxShadow: '0 0 0px #0000',
+        backgroundColor: originalBg,
+      },
+      {
+        scale: 1.07,
+        boxShadow: '0 4px 24px 0 #38bdf8cc',
+        backgroundColor: '#e0f2fe',
+        duration: 0.13,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power1.inOut',
+        onComplete: () => {
+          gsap.to(el, {
+            scale: 1,
+            boxShadow: '0 0 0px #0000',
+            backgroundColor: originalBg,
+            duration: 0.13,
+          });
+        },
+      }
+    );
+  };
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState<string | null>(null);
@@ -215,7 +251,9 @@ export function BookmarkletEditor() {
     };
   }, [theme]);
 
+  // Bookmarklet生成のみ
   const createBookmarklet = async () => {
+    animateButton(createBtnRef);
     if (!code.trim()) return;
     setIsProcessing(true);
     try {
@@ -224,19 +262,23 @@ export function BookmarkletEditor() {
         compress: { ...minifyOptions.compress },
         mangle: { ...minifyOptions.mangle },
         format: { ...minifyOptions.format },
-        ecma: minifyOptions.ecma as any, // 型エラー回避（terserの型ECMAはnumberのユニオン）
+        ecma: minifyOptions.ecma as any,
       });
       const minifiedCode = result.code || code;
       const wrappedCode = `javascript:(function(){${minifiedCode}})();`;
       setBookmarkletCode(wrappedCode);
-      injectCodeToIframe(code);
     } catch (error) {
       console.error('Minification error:', error);
       const wrappedCode = `javascript:(function(){${code}})();`;
       setBookmarkletCode(wrappedCode);
-      injectCodeToIframe(code);
     }
     setIsProcessing(false);
+  };
+
+  // iframeへの注入のみ
+  const runInIframe = () => {
+    animateButton(runBtnRef);
+    injectCodeToIframe(code);
   };
 
   const copyToClipboard = async () => {
@@ -347,29 +389,100 @@ console.log('Ad elements hidden');`,
             aria-controls="minify-options-panel"
             type="button"
           >
-            {showMinifyOptions ? (
-              <FiChevronDown size={20} />
-            ) : (
-              <FiChevronRight size={20} />
-            )}
+            {showMinifyOptions ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}
             Minifyオプション詳細設定
           </button>
           {showMinifyOptions && (
-            <div id="minify-options-panel" className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+            <div
+              id="minify-options-panel"
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 relative"
+            >
               {/* compress */}
               <div>
                 <div className="font-bold mb-2">compress</div>
                 <div className="flex flex-col gap-2">
-                  <label><input type="checkbox" checked={minifyOptions.compress.drop_console} onChange={e => handleMinifyOptionChange('compress', 'drop_console', e.target.checked)} /> drop_console</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.drop_debugger} onChange={e => handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)} /> drop_debugger</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe} onChange={e => handleMinifyOptionChange('compress', 'unsafe', e.target.checked)} /> unsafe</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_arrows} onChange={e => handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)} /> unsafe_arrows</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_methods} onChange={e => handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)} /> unsafe_methods</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_proto} onChange={e => handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)} /> unsafe_proto</label>
-                  <label><input type="checkbox" checked={minifyOptions.compress.unsafe_undefined} onChange={e => handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)} /> unsafe_undefined</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.drop_console}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'drop_console', e.target.checked)
+                      }
+                    />{' '}
+                    drop_console
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.drop_debugger}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'drop_debugger', e.target.checked)
+                      }
+                    />{' '}
+                    drop_debugger
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.unsafe}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'unsafe', e.target.checked)
+                      }
+                    />{' '}
+                    unsafe
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.unsafe_arrows}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'unsafe_arrows', e.target.checked)
+                      }
+                    />{' '}
+                    unsafe_arrows
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.unsafe_methods}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'unsafe_methods', e.target.checked)
+                      }
+                    />{' '}
+                    unsafe_methods
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.unsafe_proto}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'unsafe_proto', e.target.checked)
+                      }
+                    />{' '}
+                    unsafe_proto
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.compress.unsafe_undefined}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'unsafe_undefined', e.target.checked)
+                      }
+                    />{' '}
+                    unsafe_undefined
+                  </label>
                   <label>
                     passes
-                    <input type="number" min={1} max={10} value={minifyOptions.compress.passes} onChange={e => handleMinifyOptionChange('compress', 'passes', Number(e.target.value))} className="ml-2 w-16 border rounded px-1 py-0.5 text-black bg-white" />
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={minifyOptions.compress.passes}
+                      onChange={e =>
+                        handleMinifyOptionChange('compress', 'passes', Number(e.target.value))
+                      }
+                      className="ml-2 w-16 border rounded px-1 py-0.5 text-black bg-white"
+                    />
                   </label>
                 </div>
               </div>
@@ -377,20 +490,90 @@ console.log('Ad elements hidden');`,
               <div>
                 <div className="font-bold mb-2">mangle</div>
                 <div className="flex flex-col gap-2">
-                  <label><input type="checkbox" checked={minifyOptions.mangle.toplevel} onChange={e => handleMinifyOptionChange('mangle', 'toplevel', e.target.checked)} /> toplevel</label>
-                  <label><input type="checkbox" checked={minifyOptions.mangle.properties} onChange={e => handleMinifyOptionChange('mangle', 'properties', e.target.checked)} /> properties</label>
-                  <label><input type="checkbox" checked={minifyOptions.mangle.keep_classnames} onChange={e => handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)} /> keep_classnames</label>
-                  <label><input type="checkbox" checked={minifyOptions.mangle.keep_fnames} onChange={e => handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)} /> keep_fnames</label>
-                  <label><input type="checkbox" checked={minifyOptions.mangle.module} onChange={e => handleMinifyOptionChange('mangle', 'module', e.target.checked)} /> module</label>
-                  <label><input type="checkbox" checked={minifyOptions.mangle.safari10} onChange={e => handleMinifyOptionChange('mangle', 'safari10', e.target.checked)} /> safari10</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.toplevel}
+                      onChange={e =>
+                        handleMinifyOptionChange('mangle', 'toplevel', e.target.checked)
+                      }
+                    />{' '}
+                    toplevel
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.properties}
+                      onChange={e =>
+                        handleMinifyOptionChange('mangle', 'properties', e.target.checked)
+                      }
+                    />{' '}
+                    properties
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.keep_classnames}
+                      onChange={e =>
+                        handleMinifyOptionChange('mangle', 'keep_classnames', e.target.checked)
+                      }
+                    />{' '}
+                    keep_classnames
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.keep_fnames}
+                      onChange={e =>
+                        handleMinifyOptionChange('mangle', 'keep_fnames', e.target.checked)
+                      }
+                    />{' '}
+                    keep_fnames
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.module}
+                      onChange={e => handleMinifyOptionChange('mangle', 'module', e.target.checked)}
+                    />{' '}
+                    module
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.mangle.safari10}
+                      onChange={e =>
+                        handleMinifyOptionChange('mangle', 'safari10', e.target.checked)
+                      }
+                    />{' '}
+                    safari10
+                  </label>
                 </div>
               </div>
               {/* format */}
               <div>
                 <div className="font-bold mb-2">format</div>
                 <div className="flex flex-col gap-2">
-                  <label><input type="checkbox" checked={minifyOptions.format.comments} onChange={e => handleMinifyOptionChange('format', 'comments', e.target.checked)} /> comments</label>
-                  <label><input type="checkbox" checked={minifyOptions.format.beautify} onChange={e => handleMinifyOptionChange('format', 'beautify', e.target.checked)} /> beautify</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.format.comments}
+                      onChange={e =>
+                        handleMinifyOptionChange('format', 'comments', e.target.checked)
+                      }
+                    />{' '}
+                    comments
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.format.beautify}
+                      onChange={e =>
+                        handleMinifyOptionChange('format', 'beautify', e.target.checked)
+                      }
+                    />{' '}
+                    beautify
+                  </label>
                 </div>
               </div>
               {/* その他 */}
@@ -399,7 +582,13 @@ console.log('Ad elements hidden');`,
                 <div className="flex flex-col gap-2">
                   <label>
                     ecma
-                    <select value={minifyOptions.ecma} onChange={e => handleMinifyOptionChange('root', 'ecma', Number(e.target.value))} className="ml-2 border rounded px-1 py-0.5 text-black bg-white">
+                    <select
+                      value={minifyOptions.ecma}
+                      onChange={e =>
+                        handleMinifyOptionChange('root', 'ecma', Number(e.target.value))
+                      }
+                      className="ml-2 border rounded px-1 py-0.5 text-black bg-white"
+                    >
                       <option value={5}>5</option>
                       <option value={2015}>2015</option>
                       <option value={2016}>2016</option>
@@ -410,9 +599,34 @@ console.log('Ad elements hidden');`,
                       <option value={2021}>2021</option>
                     </select>
                   </label>
-                  <label><input type="checkbox" checked={minifyOptions.toplevel} onChange={e => handleMinifyOptionChange('root', 'toplevel', e.target.checked)} /> toplevel</label>
-                  <label><input type="checkbox" checked={minifyOptions.keep_classnames} onChange={e => handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)} /> keep_classnames</label>
-                  <label><input type="checkbox" checked={minifyOptions.keep_fnames} onChange={e => handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)} /> keep_fnames</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.toplevel}
+                      onChange={e => handleMinifyOptionChange('root', 'toplevel', e.target.checked)}
+                    />{' '}
+                    toplevel
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.keep_classnames}
+                      onChange={e =>
+                        handleMinifyOptionChange('root', 'keep_classnames', e.target.checked)
+                      }
+                    />{' '}
+                    keep_classnames
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={minifyOptions.keep_fnames}
+                      onChange={e =>
+                        handleMinifyOptionChange('root', 'keep_fnames', e.target.checked)
+                      }
+                    />{' '}
+                    keep_fnames
+                  </label>
                 </div>
               </div>
               {/* Resetボタン */}
@@ -503,11 +717,12 @@ console.log('Ad elements hidden');`,
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold text-card-foreground">JavaScript Editor</h2>
                 <button
+                  ref={createBtnRef}
                   onClick={createBookmarklet}
                   disabled={isProcessing || !code.trim()}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isProcessing ? 'Processing...' : 'Create Bookmarklet/Run'}
+                  {isProcessing ? 'Processing...' : 'Create Bookmarklet'}
                 </button>
               </div>
 
@@ -544,13 +759,23 @@ console.log('Ad elements hidden');`,
                 <h2 className="text-2xl font-semibold text-card-foreground">
                   Live Preview (Test Page)
                 </h2>
-                <button
-                  className="ml-2 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                  onClick={() => setIsFullscreen(true)}
-                  aria-label="全画面表示"
-                >
-                  <FiMaximize2 size={22} />
-                </button>
+                <div className="flex gap-2 items-center">
+                  <button
+                    ref={runBtnRef}
+                    onClick={runInIframe}
+                    disabled={!code.trim()}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Run (Preview)
+                  </button>
+                  <button
+                    className="ml-2 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                    onClick={() => setIsFullscreen(true)}
+                    aria-label="全画面表示"
+                  >
+                    <FiMaximize2 size={22} />
+                  </button>
+                </div>
               </div>
               <div className="w-full h-[600px] border rounded-lg overflow-hidden">
                 <iframe
